@@ -5,7 +5,6 @@ from app_logic import (
     ProfileInput,
     build_search_query_from_message,
     default_profile_values,
-    detect_tool_intents,
     recommend_track,
     suggest_career_context,
     suggest_courses,
@@ -16,14 +15,14 @@ from api.search import CourseIndexError, rebuild_index
 
 
 def _render_tool_prediction(prediction):
-    st.markdown("### 3. Career Track Prediction")
+    st.markdown("### Career Track Prediction")
     st.success(f"Predicted track: {prediction['track']}")
     st.progress(min(float(prediction["confidence"]), 1.0))
     st.caption(f"Confidence score: {prediction['confidence']:.2f}")
 
 
 def _render_tool_career_context(career_context):
-    st.markdown("### 4. Career Context")
+    st.markdown("### Career Context")
     if career_context.available:
         left_metric, right_metric = st.columns(2)
         with left_metric:
@@ -46,7 +45,7 @@ def _render_tool_career_context(career_context):
 
 
 def _render_tool_courses(courses):
-    st.markdown("### 5. Course Exploration")
+    st.markdown("### Course Exploration")
     st.info(summarize_matches(courses))
     for course in courses:
         with st.container(border=True):
@@ -55,7 +54,7 @@ def _render_tool_courses(courses):
 
 
 def _render_tool_visualization(query, courses):
-    st.markdown("### 6. Visual Exploration")
+    st.markdown("### Visual Exploration")
     projection_method = st.radio("Projection method", ["pca", "umap", "tsne"], horizontal=True, key="tool_projection_method")
     try:
         from course_index import project_courses_with_query
@@ -96,14 +95,76 @@ def _render_tool_visualization(query, courses):
         st.exception(error)
 
 
+def _tool_label(tool_key: str) -> str:
+    labels = {
+        "none": "Plain chat",
+        "career_track": "Career recommendation",
+        "career_context": "Career context",
+        "semantic_search": "Semantic search",
+    }
+    return labels.get(tool_key, "Plain chat")
+
+
+def _compose_tool_reply(user_message: str, tool_choice: str, tools_state: dict, conversation: list, resolved_model: str) -> str:
+    if tool_choice == "career_track":
+        prediction = tools_state.get("prediction") or {}
+        prompt = (
+            f"Tool result: career_track -> track={prediction.get('track', 'unknown')}, "
+            f"confidence={float(prediction.get('confidence', 0.0)):.2f}. "
+            "Write one short chat response grounded only in this result."
+        )
+    elif tool_choice == "career_context":
+        career_context = tools_state.get("career_context")
+        prompt = (
+            "Tool result: career_context -> "
+            f"available={getattr(career_context, 'available', False)}, "
+            f"track={getattr(career_context, 'track', 'unknown')}, "
+            f"job_count={getattr(career_context, 'job_count', None)}, "
+            f"salary_min={getattr(career_context, 'salary_min', None)}, "
+            f"salary_max={getattr(career_context, 'salary_max', None)}, "
+            f"top_job_titles={getattr(career_context, 'top_job_titles', [])}. "
+            "Write one short chat response grounded only in this result."
+        )
+    elif tool_choice == "semantic_search":
+        courses = tools_state.get("courses") or []
+        top_titles = [course.get("title", "Untitled") for course in courses[:3]]
+        query = tools_state.get("query") or user_message
+        prompt = (
+            "Tool result: semantic_search -> "
+            f"query='{query}', top_matches={top_titles}, visualization=available. "
+            "Write one short chat response that summarizes the matches and mentions the map if relevant."
+        )
+    else:
+        prompt = ""
+
+    if not prompt:
+        return ""
+
+    response = chat_completion(
+        [
+            {
+                "role": "system",
+                "content": (
+                    "You are MajorMatch. Keep the reply short, conversational, and grounded only in the tool result. "
+                    "Do not invent extra findings."
+                ),
+            },
+            *conversation,
+            {"role": "user", "content": prompt},
+        ],
+        model=resolved_model,
+        options={"temperature": 0.2},
+    )
+    return str(response.get("message", {}).get("content", "")).strip()
+
+
 def main():
     st.set_page_config(page_title="MajorMatch", layout="wide")
     st.title("MajorMatch")
     st.caption("A semantic course and career pathfinder for students, advisors, and freshmen.")
 
-    st.subheader("1. Landing and Orientation")
     st.write(
-        "Start by chatting with the assistant. It will call specific tools only when your question clearly asks for career prediction, job-market context, course exploration, or visualization."
+        "Chat first. The assistant only shows tool results when your message clearly asks for career prediction, job-market context, course exploration, or visualization."
     )
 
     col_status_left, col_status_right = st.columns([1, 1])
@@ -117,8 +178,7 @@ def main():
         resolved_model = resolve_chat_model()
         st.caption(f"Chat model in use: {resolved_model}")
 
-    st.divider()
-    with st.expander("Maintenance tools", expanded=False):
+    with st.expander("Maintenance", expanded=False):
         if st.button("Build / refresh course index from CSV"):
             try:
                 with st.spinner("Embedding courses and writing them to PostgreSQL..."):
@@ -129,8 +189,8 @@ def main():
             except Exception as error:
                 st.exception(error)
 
-    st.subheader("2. Chat Assistant")
-    st.caption("Chat first. Tool-specific UI appears only if a tool is actually used.")
+    st.subheader("Chat Assistant")
+    st.caption("Choose a tool first, or leave it on plain chat.")
 
     if "assistant_messages" not in st.session_state:
         st.session_state["assistant_messages"] = [
@@ -143,6 +203,20 @@ def main():
         st.session_state["assistant_profile"] = default_profile_values(5)
     if "assistant_tools_state" not in st.session_state:
         st.session_state["assistant_tools_state"] = {}
+    if "assistant_selected_tool" not in st.session_state:
+        st.session_state["assistant_selected_tool"] = "none"
+
+    tool_options = ["none", "career_track", "career_context", "semantic_search"]
+    tool_choice = st.selectbox(
+        "Tool mode",
+        tool_options,
+        index=tool_options.index(st.session_state["assistant_selected_tool"])
+        if st.session_state["assistant_selected_tool"] in tool_options
+        else 0,
+        format_func=_tool_label,
+        key="assistant_selected_tool",
+    )
+    st.caption(f"Selected tool: {_tool_label(tool_choice)}")
 
     for message in st.session_state["assistant_messages"]:
         with st.chat_message(message["role"]):
@@ -151,8 +225,6 @@ def main():
     user_message = st.chat_input("Ask anything about your major, careers, courses, or maps...")
     if user_message:
         st.session_state["assistant_messages"].append({"role": "user", "content": user_message})
-
-        intents = detect_tool_intents(user_message)
         tools_state = {
             "used_tools": [],
             "prediction": None,
@@ -175,21 +247,18 @@ def main():
                     "role": "system",
                     "content": (
                         "You are MajorMatch, a concise student assistant. Keep responses short and practical. "
-                        "Do not claim tool output unless it is visible in the UI."
+                        "When a tool is selected, answer using the tool result and keep the response grounded in that result."
                     ),
                 },
                 *st.session_state["assistant_messages"],
             ]
-            llm_response = chat_completion(conversation, model=resolved_model, options={"temperature": 0.2})
-            assistant_reply = str(llm_response.get("message", {}).get("content", "")).strip()
-
             recommendation = None
-            if "career_track" in intents:
+            if tool_choice in ("career_track", "career_context", "semantic_search"):
                 recommendation = recommend_track(profile)
                 tools_state["prediction"] = recommendation
                 tools_state["used_tools"].append("career_track")
 
-            if "career_context" in intents:
+            if tool_choice == "career_context":
                 if recommendation is None:
                     recommendation = recommend_track(profile)
                     tools_state["prediction"] = recommendation
@@ -199,7 +268,7 @@ def main():
                 tools_state["career_context"] = career_context
                 tools_state["used_tools"].append("career_context")
 
-            if "course_search" in intents or "visualization" in intents:
+            if tool_choice == "semantic_search":
                 if recommendation is None:
                     recommendation = recommend_track(profile)
                     tools_state["prediction"] = recommendation
@@ -210,12 +279,16 @@ def main():
                 courses = suggest_courses(query, top_k=5)
                 tools_state["courses"] = courses
                 tools_state["used_tools"].append("course_search")
-
-            if "visualization" in intents:
                 tools_state["visualization"] = {"enabled": True}
                 tools_state["used_tools"].append("visualization")
 
             st.session_state["assistant_tools_state"] = tools_state
+
+            if tool_choice == "none":
+                llm_response = chat_completion(conversation, model=resolved_model, options={"temperature": 0.2})
+                assistant_reply = str(llm_response.get("message", {}).get("content", "")).strip()
+            else:
+                assistant_reply = _compose_tool_reply(user_message, tool_choice, tools_state, conversation, resolved_model)
 
             if not assistant_reply:
                 assistant_reply = "I can help with career recommendations, job context, course search, and visual maps."
@@ -234,8 +307,7 @@ def main():
 
     if used_tools:
         st.divider()
-        st.subheader("Tool UI")
-        st.caption("Only the tools used for your latest request are shown.")
+        st.caption("Latest tool results")
 
         prediction = tools_state.get("prediction")
         if prediction and "career_track" in used_tools:
@@ -252,14 +324,7 @@ def main():
         if "visualization" in used_tools:
             _render_tool_visualization(tools_state.get("query") or "", tools_state.get("courses") or [])
 
-        st.markdown("### 7. Refinement Loop")
-        st.write("Ask another question to trigger a different tool and update results.")
-
-    st.divider()
-    st.subheader("8. Actionable Outcome")
-    st.write(
-        "You end with a track recommendation, market context, and relevant courses only when your question asks for those capabilities."
-    )
+        st.caption("Change the tool picker if you want a different result on the next message.")
 
 
 if __name__ == "__main__":

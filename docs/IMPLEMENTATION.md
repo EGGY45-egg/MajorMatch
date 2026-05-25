@@ -39,6 +39,7 @@ Implementation Log
 ------------------
 
 
+
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -220,12 +221,16 @@ Summary: Switch to chatbot-first UI and show tool-specific interfaces only when 
 Details: Reworked the Streamlit experience to match a chat-native flow similar to ChatGPT/Gemini behavior. The app now starts as a pure chatbot and does not pre-render prediction, career-context, course, or visualization sections by default. Added deterministic intent routing in `app_logic.py` so tools are called only when the user message clearly asks for those features (to reduce hallucination risk with lightweight local models). Tool-specific UIs are now conditionally rendered only when that tool was used for the latest user request.
 
 
+Date: 2026-05-25
+Author: RV
+Area: UI / Backend
+Files changed:
+- streamlit_app.py
+- app_logic.py
+- docs/IMPLEMENTATION.md
+Summary: Switched to a user-selected tool flow and bundled semantic search with visualization
+Details: Replaced model-driven tool triggering with a visible picker so the user now decides when a tool runs. Grouped course search and visualization into one semantic-search action, and changed assistant replies to be grounded in the selected tool result while preserving the prior chat context. Next: continue refining the picker presentation and the exact reply format for each tool.
 
-Outstanding / Next Steps
------------------------
-
-- Replace `api/predict.py` with the teammate's serialized model or an API wrapper.
-- Add `docs/ARCHITECTURE.md` and `docs/DEPLOY.md` if we finalize infra choices.
 
 Notes
 -----

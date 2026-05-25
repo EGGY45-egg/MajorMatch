@@ -23,7 +23,6 @@ TOOL_INTENT_KEYWORDS = {
         "prediction",
         "what should i study",
         "what career",
-        "help me decide",
     ],
     "career_context": [
         "job market",
@@ -133,12 +132,6 @@ def detect_tool_intents(message: str) -> List[str]:
     for intent, keywords in TOOL_INTENT_KEYWORDS.items():
         if any(keyword in lowered for keyword in keywords):
             intents.append(intent)
-
-    # Broad decision-support requests should be able to use multiple tools.
-    if any(phrase in lowered for phrase in ["help me decide", "what should i do", "what should i study", "guide me"]):
-        for fallback_intent in ("career_track", "career_context", "course_search"):
-            if fallback_intent not in intents:
-                intents.append(fallback_intent)
 
     return intents
 
