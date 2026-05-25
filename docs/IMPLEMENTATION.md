@@ -38,6 +38,17 @@ Details: Created minimal Streamlit app, prediction/search stubs, and example cou
 Implementation Log
 ------------------
 
+Date: 2026-05-25
+Author: RV
+Area: UI / Backend
+Files changed:
+- app_logic.py
+- streamlit_app.py
+- docs/IMPLEMENTATION.md
+Summary: Switch to chatbot-first UI and show tool-specific interfaces only when tools are actually invoked
+Details: Reworked the Streamlit experience to match a chat-native flow similar to ChatGPT/Gemini behavior. The app now starts as a pure chatbot and does not pre-render prediction, career-context, course, or visualization sections by default. Added deterministic intent routing in `app_logic.py` so tools are called only when the user message clearly asks for those features (to reduce hallucination risk with lightweight local models). Tool-specific UIs are now conditionally rendered only when that tool was used for the latest user request.
+
+
 
 Date: 2026-05-25
 Author: RV

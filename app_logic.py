@@ -14,6 +14,49 @@ DATA_DIR = BASE_DIR / "data"
 COURSE_CSVS = sorted([p for p in DATA_DIR.glob("*.csv")]) if DATA_DIR.exists() else []
 PROFILE_FIELDS = ("coding", "math", "design")
 
+TOOL_INTENT_KEYWORDS = {
+    "career_track": [
+        "recommend",
+        "recommendation",
+        "career track",
+        "predict",
+        "prediction",
+        "what should i study",
+        "what career",
+        "help me decide",
+    ],
+    "career_context": [
+        "job market",
+        "salary",
+        "salaries",
+        "job count",
+        "jobs",
+        "demand",
+        "market",
+        "practical",
+    ],
+    "course_search": [
+        "course",
+        "courses",
+        "class",
+        "classes",
+        "syllabus",
+        "search",
+        "find me",
+        "learn",
+    ],
+    "visualization": [
+        "visual",
+        "visualize",
+        "map",
+        "scatter",
+        "cluster",
+        "plot",
+        "show me the map",
+        "show the map",
+    ],
+}
+
 
 @dataclass(frozen=True)
 class ProfileInput:
@@ -82,6 +125,47 @@ def suggest_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
 
 def suggest_career_context(track: str, location: str = "United States"):
     return get_career_context(track, location=location)
+
+
+def detect_tool_intents(message: str) -> List[str]:
+    lowered = (message or "").lower()
+    intents: List[str] = []
+    for intent, keywords in TOOL_INTENT_KEYWORDS.items():
+        if any(keyword in lowered for keyword in keywords):
+            intents.append(intent)
+
+    # Broad decision-support requests should be able to use multiple tools.
+    if any(phrase in lowered for phrase in ["help me decide", "what should i do", "what should i study", "guide me"]):
+        for fallback_intent in ("career_track", "career_context", "course_search"):
+            if fallback_intent not in intents:
+                intents.append(fallback_intent)
+
+    return intents
+
+
+def build_search_query_from_message(message: str, fallback_track: str) -> str:
+    lowered = (message or "").lower().strip()
+    if not lowered:
+        return build_course_query(fallback_track)
+
+    stop_phrases = [
+        "show me",
+        "find me",
+        "courses for",
+        "classes for",
+        "search for",
+        "look for",
+        "recommend",
+        "recommendations",
+        "courses",
+        "classes",
+    ]
+    query = message.strip()
+    for phrase in stop_phrases:
+        if phrase in lowered:
+            query = query.lower().replace(phrase, "")
+    query = " ".join(query.split()).strip(" ,.")
+    return query or build_course_query(fallback_track)
 
 
 def build_course_query(track: str) -> str:
