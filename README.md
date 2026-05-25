@@ -1,33 +1,36 @@
 # MajorMatch
 
-Minimal scaffold for the MajorMatch GenAI app.
+MajorMatch is a semantic course and career pathfinder.
 
-Quickstart
----------
+Current implementation
+- Chat-first Ollama interview that builds a structured profile.
+- PostgreSQL + pgvector-backed semantic search over the course corpus.
+- PCA, UMAP, and t-SNE course projection plots in the Streamlit UI.
 
-1. Create a Python virtual environment and install dependencies:
+Setup
+1. Create and activate a virtual environment.
+2. Install dependencies:
 
-```bash
-python -m venv .venv
-source .venv/Scripts/activate   # Windows: .venv\Scripts\activate
+```powershell
 pip install -r requirements.txt
 ```
 
-2. Run the Streamlit app:
+3. Set `DATABASE_URL` to your PostgreSQL database.
+4. Build the course index:
 
-```bash
+```powershell
+python scripts/embed.py
+```
+
+5. Run the app:
+
+```powershell
 streamlit run streamlit_app.py
 ```
 
-What is included
-- `streamlit_app.py`: lightweight UI to input profile and search courses
-- `api/predict.py`: prediction stub (replace with teammate's model)
-- `api/search.py`: keyword-based search stub (replace with embeddings + pgvector)
-- `data/courses.csv`: small curated course corpus
-- `scripts/embed.py`: placeholder for embedding computation
-
-Next steps
-- Implement the ML model and have the teammate add a serialized model or an API endpoint.
-- Compute embeddings (use `sentence-transformers`) and store in PostgreSQL with `pgvector`.
-- Replace the search stub with an embeddings-backed retrieval layer.
+Environment variables
+- `DATABASE_URL`: PostgreSQL connection string.
+- `OLLAMA_BASE_URL`: Ollama server URL, defaults to `http://localhost:11434`.
+- `OLLAMA_MODEL`: Chat model name, defaults to `llama3.2:1b`.
+- `EMBEDDING_MODEL`: Sentence-transformer model used for course embeddings.
 

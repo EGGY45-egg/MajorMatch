@@ -125,6 +125,19 @@ Files changed:
 Summary: Remove Ollama fallbacks so debug failures surface directly
 Details: The chat flow now raises errors when Ollama is unavailable or returns unusable output. The UI no longer tells the user there is a silent fallback path; it now reports that Ollama must be running for chat debugging.
 
+Date: 2026-05-25
+Author: RV
+Area: Backend / Data / UI
+Files changed:
+- course_index.py
+- api/search.py
+- app_logic.py
+- streamlit_app.py
+- scripts/embed.py
+- requirements.txt
+Summary: Added pgvector-backed embeddings, semantic search, and PCA/UMAP/t-SNE projections
+Details: Course records are now stored in PostgreSQL with pgvector embeddings and 2D coordinates for PCA, UMAP, and t-SNE. The Streamlit app can rebuild the index from the CSV corpus and render a projection scatter plot for any of the three methods.
+
 
 Outstanding / Next Steps
 -----------------------

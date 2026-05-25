@@ -1,4 +1,5 @@
 import streamlit as st
+import plotly.express as px
 
 from app_logic import (
     coerce_profile_values,
@@ -14,6 +15,7 @@ from app_logic import (
     summarize_matches,
 )
 from api.ollama import interview_profile, ollama_is_available, resolve_chat_model
+from api.search import CourseIndexError, get_course_projection_points, rebuild_index
 
 def main():
     st.set_page_config(page_title="MajorMatch", layout="wide")
@@ -37,6 +39,21 @@ def main():
     else:
         st.error("Ollama is not reachable right now. Start Ollama before using the chat flow; errors will surface directly for debugging.")
     st.caption(f"Chat model in use: {resolved_model}")
+
+    st.divider()
+    index_controls, index_status = st.columns([1, 1])
+    with index_controls:
+        if st.button("Build / refresh course index from CSV"):
+            try:
+                with st.spinner("Embedding courses and writing them to PostgreSQL + pgvector..."):
+                    indexed_count = rebuild_index()
+                st.success(f"Indexed {indexed_count} courses.")
+            except CourseIndexError as error:
+                st.error(str(error))
+            except Exception as error:
+                st.exception(error)
+    with index_status:
+        st.caption("The index must be built once before semantic search and projections can render.")
 
     st.divider()
 
@@ -135,9 +152,16 @@ def main():
         auto_query = build_course_query(str(recommendation["track"]))
         query = st.text_input("Search courses", value=auto_query)
 
-        search_results = suggest_courses(query, top_k=5)
-        st.session_state["last_query"] = query
-        st.session_state["last_results"] = search_results
+        try:
+            search_results = suggest_courses(query, top_k=5)
+            st.session_state["last_query"] = query
+            st.session_state["last_results"] = search_results
+        except CourseIndexError as error:
+            st.error(str(error))
+            st.session_state["last_results"] = []
+        except Exception as error:
+            st.exception(error)
+            st.session_state["last_results"] = []
 
     with right:
         st.subheader("2. What to explore next")
@@ -152,6 +176,35 @@ def main():
                     st.write(course["description"])
         else:
             st.warning("No courses are available yet. Check the corpus or try a broader query.")
+
+        st.subheader("Course projection map")
+        projection_method = st.radio("Projection method", ["pca", "umap", "tsne"], horizontal=True)
+        try:
+            points = get_course_projection_points(projection_method)
+            if points:
+                frame = {
+                    "title": [point.title for point in points],
+                    "description": [point.description for point in points],
+                    "x": [point.x for point in points],
+                    "y": [point.y for point in points],
+                }
+                figure = px.scatter(
+                    frame,
+                    x="x",
+                    y="y",
+                    hover_name="title",
+                    hover_data={"description": True, "x": False, "y": False},
+                    title=f"{projection_method.upper()} projection of course embeddings",
+                )
+                figure.update_traces(marker=dict(size=11, opacity=0.85))
+                figure.update_layout(height=460, margin=dict(l=20, r=20, t=50, b=20))
+                st.plotly_chart(figure, use_container_width=True)
+            else:
+                st.info("No projection points found yet. Build the index first.")
+        except CourseIndexError as error:
+            st.error(str(error))
+        except Exception as error:
+            st.exception(error)
 
         st.subheader("Demo flow")
         st.write(

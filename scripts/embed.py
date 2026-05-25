@@ -1,10 +1,12 @@
-"""Placeholder for embedding computation and storage.
-This script will later compute embeddings for the course corpus
-and write them into PostgreSQL/pgvector or a local cache.
-"""
+"""Build the PostgreSQL + pgvector course index from the CSV corpus."""
 
-def compute_and_store_embeddings():
-    print("Placeholder: compute embeddings and store in DB")
+from course_index import rebuild_course_index
 
-if __name__ == '__main__':
-    compute_and_store_embeddings()
+
+def main():
+    count = rebuild_course_index()
+    print(f"Indexed {count} courses into PostgreSQL + pgvector.")
+
+
+if __name__ == "__main__":
+    main()

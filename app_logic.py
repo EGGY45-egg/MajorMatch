@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Sequence
 
 from api.predict import predict_track
-from api.search import load_courses, semantic_search
+from api.search import semantic_search
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -73,10 +73,7 @@ def recommend_track(profile: ProfileInput) -> Dict[str, object]:
 
 
 def suggest_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
-    courses = load_courses(str(COURSE_CSV))
-    if not query.strip():
-        return courses[:top_k]
-    return semantic_search(query, courses, top_k=top_k)
+    return semantic_search(query, top_k=top_k)
 
 
 def build_course_query(track: str) -> str:
