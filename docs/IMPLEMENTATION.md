@@ -38,17 +38,6 @@ Details: Created minimal Streamlit app, prediction/search stubs, and example cou
 Implementation Log
 ------------------
 
-Date: 2026-05-25
-Author: RV
-Area: UI / Backend
-Files changed:
-- app_logic.py
-- streamlit_app.py
-- docs/IMPLEMENTATION.md
-Summary: Switch to chatbot-first UI and show tool-specific interfaces only when tools are actually invoked
-Details: Reworked the Streamlit experience to match a chat-native flow similar to ChatGPT/Gemini behavior. The app now starts as a pure chatbot and does not pre-render prediction, career-context, course, or visualization sections by default. Added deterministic intent routing in `app_logic.py` so tools are called only when the user message clearly asks for those features (to reduce hallucination risk with lightweight local models). Tool-specific UIs are now conditionally rendered only when that tool was used for the latest user request.
-
-
 
 Date: 2026-05-25
 Author: RV
@@ -218,6 +207,17 @@ Files changed:
 - tests/test_orchestrator.py
 Summary: Add an Ollama tool-calling orchestrator for prediction, job context, and course search
 Details: Introduced a shared Ollama `chat_completion()` helper that supports tool definitions, then added `api/orchestrator.py` to run a tool-calling conversation loop using the three main MajorMatch capabilities: career-track prediction, Adzuna job context, and semantic course search. The Streamlit app now includes a dedicated orchestrated-assistant panel so users can ask one question and let Ollama decide which tools to invoke. Added pytest coverage that simulates a multi-tool conversation and verifies the tool trace and returned artifacts. Next: refine the prompt/tool schema and consider showing orchestrator artifacts in a more compact UI card layout.
+
+
+Date: 2026-05-25
+Author: RV
+Area: UI / Backend
+Files changed:
+- app_logic.py
+- streamlit_app.py
+- docs/IMPLEMENTATION.md
+Summary: Switch to chatbot-first UI and show tool-specific interfaces only when tools are actually invoked
+Details: Reworked the Streamlit experience to match a chat-native flow similar to ChatGPT/Gemini behavior. The app now starts as a pure chatbot and does not pre-render prediction, career-context, course, or visualization sections by default. Added deterministic intent routing in `app_logic.py` so tools are called only when the user message clearly asks for those features (to reduce hallucination risk with lightweight local models). Tool-specific UIs are now conditionally rendered only when that tool was used for the latest user request.
 
 
 
