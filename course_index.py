@@ -9,7 +9,8 @@ from typing import Dict, Iterable, List, Optional, Sequence
 import numpy as np
 from sqlalchemy import Float, Integer, String, Text, create_engine, delete, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
-from pgvector.sqlalchemy import Vector
+
+from sqlalchemy.dialects.postgresql import ARRAY
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -17,6 +18,12 @@ DEFAULT_COURSE_CSV = BASE_DIR / "data" / "courses.csv"
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "384"))
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# We always store embeddings as a Postgres float array. This avoids creating
+# tables that require the server-side `vector` type at table-create time,
+# which would fail if the extension isn't installed. If the `vector`
+# extension is available, we could later migrate to it, but for now the
+# ARRAY(Float) approach is most portable across developer environments.
 
 
 class CourseIndexError(RuntimeError):
@@ -33,7 +40,8 @@ class Course(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[List[float]] = mapped_column(Vector(EMBEDDING_DIMENSION), nullable=False)
+    # Store embeddings as a Postgres float array to maximize compatibility.
+    embedding: Mapped[List[float]] = mapped_column(ARRAY(Float), nullable=False)
     pca_x: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     pca_y: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     umap_x: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -52,9 +60,13 @@ class CoursePoint:
 
 
 def get_database_url() -> str:
-    if not DATABASE_URL:
-        raise CourseIndexError("DATABASE_URL is not set. Configure a PostgreSQL database before using retrieval or projections.")
-    return DATABASE_URL
+    if DATABASE_URL:
+        return DATABASE_URL
+
+    # Fall back to a sensible local default for developer convenience.
+    # Use the common local Postgres defaults the user provided: postgres/postgres
+    default_url = "postgresql+psycopg2://postgres:postgres@localhost:5432/semantic_search"
+    return default_url
 
 
 def get_engine():
@@ -69,7 +81,13 @@ def get_session_factory():
 def ensure_database() -> None:
     engine = get_engine()
     with engine.begin() as connection:
-        connection.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS vector")
+        # Try to create the vector extension if available on the server. If
+        # it is not, continue — we store embeddings as float[] and compute
+        # similarities in Python.
+        try:
+            connection.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS vector")
+        except Exception:
+            pass
     Base.metadata.create_all(engine)
 
 
@@ -189,14 +207,30 @@ def search_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
     ensure_database()
     query_embedding = compute_embeddings([query])[0].tolist()
     session_factory = get_session_factory()
-    with session_factory() as session:
-        stmt = (
-            select(Course)
-            .order_by(Course.embedding.cosine_distance(query_embedding))
-            .limit(top_k)
-        )
-        rows = session.execute(stmt).scalars().all()
-        return [course_to_dict(course) for course in rows]
+    # Compute similarity in Python by loading course embeddings into memory.
+    all_courses = list_courses()
+    if not all_courses:
+        return []
+    embeddings = np.asarray([c.get("embedding") for c in all_courses], dtype=np.float32)
+    # Depending on storage shape, embeddings may be nested lists
+    if embeddings.ndim == 1:
+        embeddings = np.stack(embeddings)
+    q = np.asarray(query_embedding, dtype=np.float32)
+    # cosine similarity
+    def cosine(a, b):
+        a_norm = a / (np.linalg.norm(a) + 1e-12)
+        b_norm = b / (np.linalg.norm(b) + 1e-12)
+        return float(np.dot(a_norm, b_norm))
+
+    scores = [cosine(q, emb) for emb in embeddings]
+    ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k]
+    results = []
+    for idx, score in ranked:
+        item = all_courses[idx]
+        item_copy = dict(item)
+        item_copy["score"] = score
+        results.append(item_copy)
+    return results
 
 
 def list_courses(limit: Optional[int] = None) -> List[Dict[str, str]]:
@@ -236,4 +270,11 @@ def get_projection_points(method: str = "pca") -> List[CoursePoint]:
 
 
 def course_to_dict(course: Course) -> Dict[str, str]:
-    return {"title": course.title, "description": course.description}
+    # Include the stored embedding so callers can compute similarity when the
+    # server doesn't support pgvector. The embedding is stored as a list of
+    # floats (Postgres float[]), so return it as-is.
+    return {
+        "title": course.title,
+        "description": course.description,
+        "embedding": list(course.embedding) if course.embedding is not None else None,
+    }

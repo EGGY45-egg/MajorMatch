@@ -40,6 +40,29 @@ Implementation Log
 
 Date: 2026-05-25
 Author: RV
+Area: Backend / Data / Infra
+Files changed:
+- course_index.py
+- scripts/embed.py
+- api/search.py
+- api/ollama.py
+- app_logic.py
+- streamlit_app.py
+Summary: Make embeddings robust across developer environments and fix import/indexing issues
+Details: Added a portable embedding storage and retrieval path so the project runs without the `pgvector` server extension during development. Changes include:
+
+- Store embeddings in Postgres as `float[]` (`ARRAY(Float)`) to avoid table-creation failures when the `vector` extension is not installed.
+- Add a Python-side cosine similarity fallback that ranks nearest neighbors by loading embeddings into memory; this keeps search functional for small-to-medium corpora without pgvector.
+- Ensure `course_to_dict()` returns stored embeddings so the fallback search can compute similarity correctly.
+- Update `scripts/embed.py` to add the project root to `sys.path` so `course_index` imports work when the script is run from `scripts/`.
+- Provide a default local `DATABASE_URL` fallback (postgres/postgres@localhost:5432/semantic_search) when the env var is not set to simplify initial developer setup.
+- Fixed Ollama adapter behavior and kept chat-first interview flow; updated error surfacing so failures are visible during debugging.
+
+Next steps: enable/install `pgvector` on the DB server for better scale/performance (or run a pgvector-ready Postgres image), optionally add an `ollama` embedding provider to use `nomic-embed-text:latest`, and add a migration to convert `float[]` embeddings to `vector` if/when the extension becomes available.
+
+
+Date: 2026-05-25
+Author: RV
 Area: Scaffold
 Files changed:
 - streamlit_app.py
