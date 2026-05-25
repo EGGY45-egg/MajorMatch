@@ -39,7 +39,6 @@ Implementation Log
 ------------------
 
 
-
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -230,6 +229,17 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Switched to a user-selected tool flow and bundled semantic search with visualization
 Details: Replaced model-driven tool triggering with a visible picker so the user now decides when a tool runs. Grouped course search and visualization into one semantic-search action, and changed assistant replies to be grounded in the selected tool result while preserving the prior chat context. Next: continue refining the picker presentation and the exact reply format for each tool.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- streamlit_app.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Replaced manual tool selection with autonomous function-calling orchestration
+Details: Refactored the chat experience back into a true agent flow. The model now chooses tools automatically through Ollama function-calling using explicit schemas for career prediction, career context, and combined semantic search with projection output. The Streamlit UI no longer exposes a tool dropdown; it simply renders the assistant reply and any tool artifacts returned by the orchestrator. Added projection data to the semantic-search tool so the visualization is bundled with the course results.
 
 
 Notes

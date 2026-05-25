@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from app_logic import ProfileInput, coerce_profile_values, profile_to_text, recommend_track, suggest_career_context, suggest_courses
+from course_index import project_courses_with_query
 from api.ollama import chat_completion, resolve_chat_model
 
 
@@ -63,15 +64,20 @@ def build_tool_schemas() -> List[Dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "search_courses",
-                "description": "Search the course corpus semantically using a natural-language query.",
+                "name": "execute_semantic_search",
+                "description": "Search the course corpus semantically and generate a projection for visualization.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string"},
-                        "top_k": {"type": "integer", "minimum": 1, "maximum": 10},
+                        "user_query": {"type": "string", "description": "The user's course exploration or learning question."},
+                        "top_k": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
+                        "projection_method": {
+                            "type": "string",
+                            "enum": ["pca", "umap", "tsne"],
+                            "default": "pca",
+                        },
                     },
-                    "required": ["query"],
+                    "required": ["user_query"],
                 },
             },
         },
@@ -130,14 +136,50 @@ def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int],
         context = suggest_career_context(track, location=effective_location)
         return context.to_dict()
 
-    if name == "search_courses":
-        query = str(arguments.get("query") or "").strip()
+    if name == "execute_semantic_search":
+        query = str(arguments.get("user_query") or "").strip()
         top_k = int(arguments.get("top_k") or 5)
+        projection_method = str(arguments.get("projection_method") or "pca").strip().lower() or "pca"
         results = suggest_courses(query, top_k=top_k)
+
+        projection: Dict[str, Any]
+        try:
+            course_points, query_point = project_courses_with_query(query, method=projection_method)
+            projection = {
+                "available": True,
+                "method": projection_method,
+                "courses": [
+                    {
+                        "id": point.id,
+                        "title": point.title,
+                        "description": point.description,
+                        "x": point.x,
+                        "y": point.y,
+                    }
+                    for point in course_points
+                ],
+                "query_point": None
+                if query_point is None
+                else {
+                    "id": query_point.id,
+                    "title": query_point.title,
+                    "description": query_point.description,
+                    "x": query_point.x,
+                    "y": query_point.y,
+                },
+            }
+        except Exception as error:
+            projection = {
+                "available": False,
+                "method": projection_method,
+                "error": str(error),
+            }
+
         return {
             "query": query,
             "top_k": top_k,
             "results": results,
+            "projection": projection,
         }
 
     raise ValueError(f"Unsupported tool: {name}")
@@ -149,6 +191,7 @@ def run_orchestrated_assistant(
     *,
     location: str = "United States",
     model: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, str]]] = None,
     max_steps: int = 4,
     chat_fn: Callable[..., Dict[str, Any]] = chat_completion,
 ) -> OrchestratorResult:
@@ -156,10 +199,11 @@ def run_orchestrated_assistant(
     resolved_model = resolve_chat_model(model)
 
     system_prompt = (
-        "You are MajorMatch's orchestrator. Use tools to help the student decide on a career track, "
-        "show live job-market context, and surface relevant courses. When useful, call predict_track first, "
-        "then get_career_context for the predicted or chosen track, then search_courses for specific learning topics. "
-        "Keep replies concise, helpful, and user-facing."
+        "You are MajorMatch's orchestrator. Use tools automatically whenever they are relevant. "
+        "Call predict_track when the user's profile or skill fit needs a recommendation. "
+        "Call get_career_context when the user asks about market demand, salary, or career outlook. "
+        "Call execute_semantic_search when the user asks for courses, learning resources, course planning, or a visual map of relevant options. "
+        "Keep replies concise, grounded in tool results, and user-facing."
     )
 
     messages: List[Dict[str, Any]] = [
@@ -168,8 +212,11 @@ def run_orchestrated_assistant(
             "role": "system",
             "content": f"Current profile: {profile_to_text(profile)}. Preferred location: {location}.",
         },
-        {"role": "user", "content": user_message},
     ]
+    if conversation_history:
+        messages.extend(conversation_history)
+    else:
+        messages.append({"role": "user", "content": user_message})
 
     tool_schemas = build_tool_schemas()
     trace: List[ToolTrace] = []
@@ -208,8 +255,8 @@ def run_orchestrated_assistant(
                 artifacts["profile"] = profile
             elif name == "get_career_context":
                 artifacts["career_context"] = result
-            elif name == "search_courses":
-                artifacts["courses"] = result
+            elif name == "execute_semantic_search":
+                artifacts["semantic_search"] = result
 
             tool_message: Dict[str, Any] = {
                 "role": "tool",

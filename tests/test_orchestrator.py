@@ -40,6 +40,36 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
             }
         ],
     )
+    monkeypatch.setattr(
+        orchestrator,
+        "project_courses_with_query",
+        lambda query, method="pca": (
+            [
+                type(
+                    "FakePoint",
+                    (),
+                    {
+                        "id": 1,
+                        "title": "Web Development with Flask",
+                        "description": "Build web apps with Flask",
+                        "x": 1.0,
+                        "y": 2.0,
+                    },
+                )()
+            ],
+            type(
+                "FakePoint",
+                (),
+                {
+                    "id": -1,
+                    "title": "(query)",
+                    "description": query,
+                    "x": 0.0,
+                    "y": 0.0,
+                },
+            )(),
+        ),
+    )
 
     responses = iter(
         [
@@ -81,8 +111,8 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
                             "id": "call-3",
                             "type": "function",
                             "function": {
-                                "name": "search_courses",
-                                "arguments": "{\"query\": \"web development\", \"top_k\": 2}",
+                                "name": "execute_semantic_search",
+                                "arguments": "{\"user_query\": \"web development\", \"top_k\": 2, \"projection_method\": \"pca\"}",
                             },
                         }
                     ],
@@ -105,9 +135,9 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
     assert result.reply == "Here is a compact plan for you."
     assert result.artifacts["prediction"]["track"] == "Software Engineer"
     assert result.artifacts["career_context"]["job_count"] == 101
-    assert result.artifacts["courses"]["results"][0]["title"] == "Web Development with Flask"
+    assert result.artifacts["semantic_search"]["results"][0]["title"] == "Web Development with Flask"
     assert [trace.name for trace in result.tool_trace] == [
         "predict_track",
         "get_career_context",
-        "search_courses",
+        "execute_semantic_search",
     ]
