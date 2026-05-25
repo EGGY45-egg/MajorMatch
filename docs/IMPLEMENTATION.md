@@ -51,6 +51,14 @@ Files changed:
 Summary: Initial scaffold added (Streamlit app, API stubs, sample data).
 Details: Vertical MVP stub implemented to allow end-to-end testing without external services. Teammate will add the serialized ML model under `models/` or expose an API; embeddings will be computed and stored in PostgreSQL with `pgvector` later.
 
+Date: 2026-05-25
+Author: RV
+Area: MVP
+Files changed:
+- api/search.py
+Summary: Add embedding-backed semantic search with fallback
+Details: `api/search.py` now attempts to load `sentence-transformers` and compute corpus embeddings on demand. If the library or model fails to load, the code falls back to the earlier keyword scoring method. This enables a stronger vertical MVP while keeping the repo runnable without heavy dependencies.
+
 
 Outstanding / Next Steps
 -----------------------
