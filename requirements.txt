@@ -5,3 +5,5 @@ sentence-transformers
 sqlalchemy
 psycopg2-binary
 pgvector
+torch
+torchvision
