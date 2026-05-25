@@ -40,6 +40,7 @@ Implementation Log
 
 
 
+
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -251,6 +252,16 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Added dedicated post-tool response prompts for each tool
 Details: The orchestrator now builds tool-specific final reply instructions after tool execution, so career prediction, career context, and semantic search each get a tailored response style. The final assistant message is still generated from the shared chat history, but the prompt now reflects the exact tool results that were produced. Updated the orchestrator test to cover the extra finalization pass.
+
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Make semantic-search replies mirror the database output more strictly
+Details: Tightened the semantic-search post-tool prompt so the final assistant message starts from the tool’s database-backed results instead of paraphrasing them. This reduces wording drift between the tool output and the model response; the reply now uses a fixed database-summary frame and only mentions the visualization if it is available.
 
 
 Notes

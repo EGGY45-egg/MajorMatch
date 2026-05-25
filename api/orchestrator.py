@@ -186,32 +186,32 @@ def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int],
 
 
 def _build_final_response_prompt(tool_trace: List[ToolTrace], artifacts: Dict[str, Any]) -> str:
+    # Global instruction: short one-line summary + up to 2 concise bullets.
     sections: List[str] = [
         "Write one short, user-facing reply grounded in the tool results below.",
-        "Keep the tone helpful and conversational.",
-        "Do not mention internal tool names unless it improves clarity.",
+        "Format: 1) single-sentence summary, 2) up to two short bullet points (concise).",
+        "Do not include suggested next steps or follow-ups; keep the reply strictly descriptive.",
     ]
 
     for trace in tool_trace:
         if trace.name == "predict_track":
             prediction = artifacts.get("prediction") or {}
             sections.append(
-                "Career recommendation tool result: "
+                "Career recommendation result: "
                 f"track={prediction.get('track', 'unknown')}, "
                 f"confidence={float(prediction.get('confidence', 0.0)):.2f}. "
-                "Respond like a concise recommendation summary."
+                "Tone: concise, prescriptive — state the top recommendation in one sentence and two bullets of supporting signals."
             )
         elif trace.name == "get_career_context":
             career_context = artifacts.get("career_context") or {}
             sections.append(
-                "Career context tool result: "
+                "Career market context result: "
                 f"available={career_context.get('available', False)}, "
                 f"track={career_context.get('track', 'unknown')}, "
                 f"job_count={career_context.get('job_count')}, "
                 f"salary_min={career_context.get('salary_min')}, "
-                f"salary_max={career_context.get('salary_max')}, "
-                f"top_job_titles={career_context.get('top_job_titles', [])}. "
-                "Respond like a short market-context summary."
+                f"salary_max={career_context.get('salary_max')}. "
+                "Tone: neutral and factual — one-sentence market summary then up to two factual bullets."
             )
         elif trace.name == "execute_semantic_search":
             semantic_search = artifacts.get("semantic_search") or {}
@@ -219,11 +219,11 @@ def _build_final_response_prompt(tool_trace: List[ToolTrace], artifacts: Dict[st
             top_titles = [item.get("title", "Untitled") for item in results[:3]]
             projection = semantic_search.get("projection") or {}
             sections.append(
-                "Semantic search tool result: "
+                "Semantic search result: "
                 f"query='{semantic_search.get('query', '')}', "
                 f"top_matches={top_titles}, "
                 f"projection_available={projection.get('available', False)}. "
-                "Respond like a course-search summary and mention the map if available."
+                "Use a strict database-summary style: start with 'Based on what is in my database using the semantic search tool, the results are:' and then list the top matches exactly as returned. Do not add interpretation, ranking claims, or extra recommendations. If a map/projection is available, mention only that the visualization is shown below."
             )
 
     return "\n\n".join(sections)
