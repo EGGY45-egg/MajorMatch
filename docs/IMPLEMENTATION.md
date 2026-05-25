@@ -253,7 +253,6 @@ Files changed:
 Summary: Added dedicated post-tool response prompts for each tool
 Details: The orchestrator now builds tool-specific final reply instructions after tool execution, so career prediction, career context, and semantic search each get a tailored response style. The final assistant message is still generated from the shared chat history, but the prompt now reflects the exact tool results that were produced. Updated the orchestrator test to cover the extra finalization pass.
 
-
 Date: 2026-05-26
 Author: RV
 Area: UI / Backend / ML
@@ -262,6 +261,16 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Make semantic-search replies mirror the database output more strictly
 Details: Tightened the semantic-search post-tool prompt so the final assistant message starts from the tool’s database-backed results instead of paraphrasing them. This reduces wording drift between the tool output and the model response; the reply now uses a fixed database-summary frame and only mentions the visualization if it is available.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Make career-context replies mirror the API output more strictly
+Details: Similar to the semantic-search prompt tightening, the career-context post-tool prompt now instructs the model to report only the exact API results (job count, salary range, top job titles, top companies) in a fixed database-summary format. This reduces hallucination risk and keeps the assistant reply closely tied to the actual data returned by the tool. Updated the orchestrator test to expect the new career-context reply format.
 
 
 Notes

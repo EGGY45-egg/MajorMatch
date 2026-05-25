@@ -142,3 +142,27 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
         "get_career_context",
         "execute_semantic_search",
     ]
+
+
+def test_career_context_prompt_requests_exact_tool_fields():
+    prompt = orchestrator._build_final_response_prompt(
+        [orchestrator.ToolTrace(name="get_career_context", arguments={}, result={})],
+        {
+            "career_context": {
+                "available": True,
+                "track": "Software Engineer",
+                "job_count": 101,
+                "salary_min": 60000,
+                "salary_max": 95000,
+                "top_job_titles": ["Junior Developer"],
+                "top_companies": ["Example Co"],
+            }
+        },
+    )
+
+    assert "Based on the career context tool, the results are:" in prompt
+    assert "job_count=101" in prompt
+    assert "salary_min=60000" in prompt
+    assert "salary_max=95000" in prompt
+    assert "top_job_titles" in prompt
+    assert "top_companies" in prompt

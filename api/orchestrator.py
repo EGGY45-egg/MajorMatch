@@ -211,7 +211,7 @@ def _build_final_response_prompt(tool_trace: List[ToolTrace], artifacts: Dict[st
                 f"job_count={career_context.get('job_count')}, "
                 f"salary_min={career_context.get('salary_min')}, "
                 f"salary_max={career_context.get('salary_max')}. "
-                "Tone: neutral and factual — one-sentence market summary then up to two factual bullets."
+                "Use a strict database-summary style: start with 'Based on the career context tool, the results are:' and then report only the exact job_count, salary_min, salary_max, top_job_titles, and top_companies from the tool output. Do not invent example jobs, do not change the role names, and do not add interpretation beyond a brief note that these are tool results."
             )
         elif trace.name == "execute_semantic_search":
             semantic_search = artifacts.get("semantic_search") or {}
