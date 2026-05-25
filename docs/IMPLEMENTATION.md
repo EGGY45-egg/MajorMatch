@@ -81,6 +81,41 @@ Files changed:
 Summary: Syntax validation passed on the edited Python files
 Details: The terminal smoke test was skipped by the environment, so I validated the edited Python files through the editor error checker. No syntax or static errors were reported for the current MVP slice.
 
+Date: 2026-05-25
+Author: RV
+Area: Backend / UI
+Files changed:
+- app_logic.py
+- api/ollama.py
+- streamlit_app.py
+Summary: Added an optional Ollama interview flow with slider fallback
+Details: The app can now ask the user questions through Ollama, build a structured coding/math/design profile, and still keep the slider controls inside a debug expander. If Ollama is unavailable, the interview falls back to local prompts so the MVP stays demoable.
+
+Date: 2026-05-25
+Author: RV
+Area: Backend / UI
+Files changed:
+- api/ollama.py
+- streamlit_app.py
+Summary: Auto-resolve an installed Ollama chat model instead of hardcoding a missing default
+Details: The adapter now prefers installed chat models from `ollama list` and defaults to `llama3.2:1b`, which matches the model already present in your environment. The Streamlit UI also shows which chat model is being used.
+
+Date: 2026-05-25
+Author: RV
+Area: Backend / UI
+Files changed:
+- api/ollama.py
+Summary: Suppress brace-only Ollama replies and infer profile updates from user text
+Details: The interview flow now extracts useful profile signals from the user’s natural-language response before calling Ollama, and it replaces malformed brace-only assistant output with a real follow-up question based on missing fields.
+
+Date: 2026-05-25
+Author: RV
+Area: Backend / UI
+Files changed:
+- api/ollama.py
+Summary: Switch Ollama interview from JSON-only output to natural chat replies
+Details: The assistant now talks in plain text, while the app still infers and merges profile scores separately. This avoids brace-only replies and keeps the chat layer usable even when the model does not strictly follow a JSON format.
+
 
 Outstanding / Next Steps
 -----------------------
