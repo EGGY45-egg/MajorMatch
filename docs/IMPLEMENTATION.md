@@ -165,6 +165,16 @@ Files changed:
 Summary: Implement semantic search API and make embedding/indexing robust
 Details: Implemented a stable `semantic_search()` API wrapper that validates inputs, strips embeddings from responses, and returns consistent metadata (`id`, `title`, `description`, `score`, `score_normalized`, and projection coordinates). Refactored embedding storage to use `float[]` (`ARRAY(Float)`) for portability, added a Python cosine-similarity fallback when server-side `pgvector` is unavailable, and updated the indexer (`scripts/embed.py`) to support indexing multiple CSV files under `data/`. Also fixed import issues by ensuring the embed script can import project modules and added CSV header expectations to the docs. Next: add smoke tests and UI polish for provider/fallback visibility.
 
+Date: 2026-05-25
+Author: RV
+Area: UI / Backend
+Files changed:
+- course_index.py
+- streamlit_app.py
+- docs/IMPLEMENTATION.md
+Summary: Show query point and highlight top-match in projection plot
+Details: Added `project_courses_with_query()` to `course_index.py` to compute 2D projections that include the user's query so points share a consistent coordinate system. Updated `streamlit_app.py` to render the query point on the projection and color the top match differently (colors: course=blue, top_match=red, query=green). Also surfaced embedding model name and `pgvector` availability in the UI so users can see whether the app is using the in-Python similarity fallback or server vector ops. Note: PCA/UMAP/TSNE projections are computed on-demand and may add CPU cost for large corpora; next steps include annotating the top match, increasing query marker size, and caching projection reducers for faster UI response.
+
 
 Outstanding / Next Steps
 -----------------------

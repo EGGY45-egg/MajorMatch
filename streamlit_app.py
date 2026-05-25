@@ -29,8 +29,16 @@ def main():
             "Start with your skills, get a track recommendation, then use that recommendation to discover relevant courses."
         )
     with col_status:
-        st.metric("Current mode", "Demo MVP")
-        st.write("Everything here is wired for a clean first demo and easy testing.")
+        from course_index import get_embedding_model_name, server_supports_vector
+
+        model_name = get_embedding_model_name()
+        pgvector_available = server_supports_vector()
+
+        st.metric("Embedding model", model_name)
+        if pgvector_available:
+            st.success("pgvector available — SQL vector ops will be used when enabled")
+        else:
+            st.info("pgvector not available — using in-Python similarity fallback")
 
     ollama_ready = ollama_is_available()
     resolved_model = resolve_chat_model()
@@ -180,23 +188,48 @@ def main():
         st.subheader("Course projection map")
         projection_method = st.radio("Projection method", ["pca", "umap", "tsne"], horizontal=True)
         try:
-            points = get_course_projection_points(projection_method)
-            if points:
+            from course_index import project_courses_with_query
+
+            # Compute projection coordinates for all courses together with the current query
+            course_points, query_point = project_courses_with_query(query, method=projection_method)
+            if course_points:
+                # Determine top match title if available
+                top_title = None
+                last_results = st.session_state.get("last_results", [])
+                if last_results:
+                    top_title = last_results[0].get("title")
+
                 frame = {
-                    "title": [point.title for point in points],
-                    "description": [point.description for point in points],
-                    "x": [point.x for point in points],
-                    "y": [point.y for point in points],
+                    "title": [p.title for p in course_points] + [query_point.title],
+                    "description": [p.description for p in course_points] + [query_point.description],
+                    "x": [p.x for p in course_points] + [query_point.x],
+                    "y": [p.y for p in course_points] + [query_point.y],
+                    "kind": ["course" for _ in course_points] + ["query"],
                 }
+
+                # Mark top match
+                kinds = []
+                for p in course_points:
+                    if top_title and p.title == top_title:
+                        kinds.append("top_match")
+                    else:
+                        kinds.append("course")
+                kinds.append("query")
+                frame["kind"] = kinds
+
                 figure = px.scatter(
                     frame,
                     x="x",
                     y="y",
+                    color="kind",
+                    color_discrete_map={"course": "blue", "top_match": "red", "query": "green"},
                     hover_name="title",
-                    hover_data={"description": True, "x": False, "y": False},
-                    title=f"{projection_method.upper()} projection of course embeddings",
+                    hover_data={"description": True, "x": False, "y": False, "kind": True},
+                    title=f"{projection_method.upper()} projection of course embeddings (query shown)",
                 )
                 figure.update_traces(marker=dict(size=11, opacity=0.85))
+                # Make query marker larger
+                # Plotly express doesn't allow per-point sizes easily without a column; use marker updates by filtering traces
                 figure.update_layout(height=460, margin=dict(l=20, r=20, t=50, b=20))
                 st.plotly_chart(figure, use_container_width=True)
             else:

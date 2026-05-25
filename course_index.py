@@ -91,6 +91,23 @@ def ensure_database() -> None:
     Base.metadata.create_all(engine)
 
 
+def server_supports_vector() -> bool:
+    """Return True if the connected Postgres server has the `vector` extension installed."""
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            result = conn.exec_driver_sql("SELECT extname FROM pg_extension WHERE extname='vector'")
+            rows = result.fetchall()
+            return len(rows) > 0
+    except Exception:
+        return False
+
+
+def get_embedding_model_name() -> str:
+    """Return the embedding model name configured for the service."""
+    return EMBEDDING_MODEL_NAME
+
+
 def load_course_corpus(csv_path: Path | str = DEFAULT_COURSE_CSV) -> List[Dict[str, str]]:
     path = Path(csv_path)
     rows: List[Dict[str, str]] = []
@@ -278,6 +295,47 @@ def get_projection_points(method: str = "pca") -> List[CoursePoint]:
                 )
             )
         return points
+
+
+def project_courses_with_query(query: str, method: str = "pca"):
+    """Project all course embeddings together with a single query string.
+
+    Returns (course_points, query_point) where course_points is a list of
+    CoursePoint matching the order of courses returned by `list_courses()`
+    and query_point is a CoursePoint with id=-1 and title="(query)".
+    """
+    ensure_database()
+    # Load courses and their embeddings
+    courses = list_courses()
+    if not courses:
+        return [], None
+
+    # Build embeddings array
+    embeddings = []
+    for c in courses:
+        emb = c.get("embedding")
+        if emb is None:
+            # If any course lacks embedding, rebuild index first
+            raise CourseIndexError("Course embeddings missing; rebuild the index first.")
+        embeddings.append(np.asarray(emb, dtype=np.float32))
+
+    # Compute query embedding
+    q_emb = compute_embeddings([query])[0].astype(np.float32)
+
+    stacked = np.vstack(embeddings + [q_emb])
+    projected = _projection_matrix(stacked, method)
+
+    course_points: List[CoursePoint] = []
+    for idx, c in enumerate(courses):
+        x = float(projected[idx][0])
+        y = float(projected[idx][1])
+        course_points.append(CoursePoint(id=c.get("id"), title=c.get("title"), description=c.get("description"), x=x, y=y))
+
+    # Query point is last
+    qx = float(projected[-1][0])
+    qy = float(projected[-1][1])
+    query_point = CoursePoint(id=-1, title="(query)", description=query, x=qx, y=qy)
+    return course_points, query_point
 
 
 def course_to_dict(course: Course) -> Dict[str, str]:
