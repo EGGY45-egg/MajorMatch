@@ -59,6 +59,28 @@ Files changed:
 Summary: Add embedding-backed semantic search with fallback
 Details: `api/search.py` now attempts to load `sentence-transformers` and compute corpus embeddings on demand. If the library or model fails to load, the code falls back to the earlier keyword scoring method. This enables a stronger vertical MVP while keeping the repo runnable without heavy dependencies.
 
+Date: 2026-05-25
+Author: RV
+Area: UI
+Files changed:
+- app_logic.py
+- streamlit_app.py
+- scripts/smoke_test.py
+Summary: Reworked the Streamlit MVP into a clearer end-to-end flow
+Details: The UI now guides users through profile input, career-track recommendation, and course discovery in one screen. The core logic moved into `app_logic.py` so it can be smoke-tested independently with `scripts/smoke_test.py`.
+
+Date: 2026-05-25
+Author: RV
+Area: Validation
+Files changed:
+- app_logic.py
+- streamlit_app.py
+- scripts/smoke_test.py
+- api/search.py
+- api/predict.py
+Summary: Syntax validation passed on the edited Python files
+Details: The terminal smoke test was skipped by the environment, so I validated the edited Python files through the editor error checker. No syntax or static errors were reported for the current MVP slice.
+
 
 Outstanding / Next Steps
 -----------------------
