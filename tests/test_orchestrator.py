@@ -119,6 +119,7 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
                 }
             },
             {"message": {"content": "Here is a compact plan for you.", "tool_calls": []}},
+            {"message": {"content": "Based on your profile, Software Engineer is the strongest fit. Here are the best job and course signals.", "tool_calls": []}},
         ]
     )
 
@@ -132,7 +133,7 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
         chat_fn=fake_chat_fn,
     )
 
-    assert result.reply == "Here is a compact plan for you."
+    assert result.reply == "Based on your profile, Software Engineer is the strongest fit. Here are the best job and course signals."
     assert result.artifacts["prediction"]["track"] == "Software Engineer"
     assert result.artifacts["career_context"]["job_count"] == 101
     assert result.artifacts["semantic_search"]["results"][0]["title"] == "Web Development with Flask"

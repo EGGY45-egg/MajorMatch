@@ -39,6 +39,7 @@ Implementation Log
 ------------------
 
 
+
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -240,6 +241,16 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Replaced manual tool selection with autonomous function-calling orchestration
 Details: Refactored the chat experience back into a true agent flow. The model now chooses tools automatically through Ollama function-calling using explicit schemas for career prediction, career context, and combined semantic search with projection output. The Streamlit UI no longer exposes a tool dropdown; it simply renders the assistant reply and any tool artifacts returned by the orchestrator. Added projection data to the semantic-search tool so the visualization is bundled with the course results.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Added dedicated post-tool response prompts for each tool
+Details: The orchestrator now builds tool-specific final reply instructions after tool execution, so career prediction, career context, and semantic search each get a tailored response style. The final assistant message is still generated from the shared chat history, but the prompt now reflects the exact tool results that were produced. Updated the orchestrator test to cover the extra finalization pass.
 
 
 Notes

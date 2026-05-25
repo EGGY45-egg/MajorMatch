@@ -185,6 +185,50 @@ def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int],
     raise ValueError(f"Unsupported tool: {name}")
 
 
+def _build_final_response_prompt(tool_trace: List[ToolTrace], artifacts: Dict[str, Any]) -> str:
+    sections: List[str] = [
+        "Write one short, user-facing reply grounded in the tool results below.",
+        "Keep the tone helpful and conversational.",
+        "Do not mention internal tool names unless it improves clarity.",
+    ]
+
+    for trace in tool_trace:
+        if trace.name == "predict_track":
+            prediction = artifacts.get("prediction") or {}
+            sections.append(
+                "Career recommendation tool result: "
+                f"track={prediction.get('track', 'unknown')}, "
+                f"confidence={float(prediction.get('confidence', 0.0)):.2f}. "
+                "Respond like a concise recommendation summary."
+            )
+        elif trace.name == "get_career_context":
+            career_context = artifacts.get("career_context") or {}
+            sections.append(
+                "Career context tool result: "
+                f"available={career_context.get('available', False)}, "
+                f"track={career_context.get('track', 'unknown')}, "
+                f"job_count={career_context.get('job_count')}, "
+                f"salary_min={career_context.get('salary_min')}, "
+                f"salary_max={career_context.get('salary_max')}, "
+                f"top_job_titles={career_context.get('top_job_titles', [])}. "
+                "Respond like a short market-context summary."
+            )
+        elif trace.name == "execute_semantic_search":
+            semantic_search = artifacts.get("semantic_search") or {}
+            results = semantic_search.get("results") or []
+            top_titles = [item.get("title", "Untitled") for item in results[:3]]
+            projection = semantic_search.get("projection") or {}
+            sections.append(
+                "Semantic search tool result: "
+                f"query='{semantic_search.get('query', '')}', "
+                f"top_matches={top_titles}, "
+                f"projection_available={projection.get('available', False)}. "
+                "Respond like a course-search summary and mention the map if available."
+            )
+
+    return "\n\n".join(sections)
+
+
 def run_orchestrated_assistant(
     user_message: str,
     current_profile: Dict[str, int],
@@ -232,6 +276,30 @@ def run_orchestrated_assistant(
         tool_calls = _extract_tool_calls(message)
 
         if not tool_calls:
+            if trace:
+                final_messages = [
+                    *messages,
+                    {
+                        "role": "system",
+                        "content": _build_final_response_prompt(trace, artifacts),
+                    },
+                ]
+                final_response = chat_fn(
+                    final_messages,
+                    model=resolved_model,
+                    options={"temperature": 0.2},
+                )
+                final_message = final_response.get("message", {}) if isinstance(final_response, dict) else {}
+                final_content = str(final_message.get("content", "") or "").strip()
+                if final_content:
+                    raw = json.dumps(final_response)
+                    return OrchestratorResult(
+                        reply=final_content,
+                        profile=profile,
+                        artifacts=artifacts,
+                        tool_trace=trace,
+                        raw=raw,
+                    )
             return OrchestratorResult(
                 reply=last_content or "I could not generate a response.",
                 profile=profile,
