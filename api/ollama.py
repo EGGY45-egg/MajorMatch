@@ -8,7 +8,6 @@ from typing import Dict, List, Optional
 
 from app_logic import (
     coerce_profile_values,
-    default_profile_values,
     missing_profile_fields,
     merge_profile_values,
     profile_to_text,
@@ -168,43 +167,6 @@ def _infer_profile_from_text(text: str, current_profile: Dict[str, int]) -> Dict
     return updated
 
 
-def _fallback_reply(profile: Dict[str, int]) -> OllamaInterviewResult:
-    missing = missing_profile_fields(profile)
-    if missing:
-        field = missing[0]
-        prompts = {
-            "coding": "What kind of coding tasks do you feel strongest in: building apps, solving logic problems, or scripting?",
-            "math": "How comfortable are you with math and data work: basic, moderate, or strong?",
-            "design": "How would you rate your interest in design, visuals, or user experience work?",
-        }
-        return OllamaInterviewResult(
-            reply=prompts[field],
-            profile=coerce_profile_values(profile),
-            complete=False,
-            used_fallback=True,
-        )
-    return OllamaInterviewResult(
-        reply="I have enough to make a recommendation now.",
-        profile=coerce_profile_values(profile),
-        complete=True,
-        used_fallback=True,
-    )
-
-
-def _question_for_missing_fields(profile: Dict[str, int]) -> str:
-    missing = missing_profile_fields(profile)
-    if not missing:
-        return "I have enough to make a recommendation now."
-
-    field = missing[0]
-    prompts = {
-        "coding": "What kind of coding tasks do you feel strongest in: building apps, solving logic problems, or scripting?",
-        "math": "How comfortable are you with math and data work: basic, moderate, or strong?",
-        "design": "How would you rate your interest in design, visuals, or user experience work?",
-    }
-    return prompts[field]
-
-
 def interview_profile(
     messages: List[Dict[str, str]],
     current_profile: Dict[str, int],
@@ -214,14 +176,7 @@ def interview_profile(
     latest_user_text = _latest_user_message(messages)
     inferred_profile = _infer_profile_from_text(latest_user_text, current_profile)
     if not ollama_is_available():
-        result = _fallback_reply(inferred_profile)
-        return OllamaInterviewResult(
-            reply=_question_for_missing_fields(result.profile),
-            profile=result.profile,
-            complete=result.complete,
-            raw=result.raw,
-            used_fallback=True,
-        )
+        raise ConnectionError(f"Ollama is not reachable at {OLLAMA_BASE_URL}")
 
     resolved_model = resolve_chat_model(model)
 
@@ -264,7 +219,7 @@ def interview_profile(
             reply = str(parsed.get("reply", reply)).strip()
 
         if not reply or reply in {"{", "}", "{}"}:
-            reply = _question_for_missing_fields(profile)
+            raise ValueError(f"Ollama returned unusable reply: {content!r}")
 
         if parsed and "complete" in parsed:
             complete = bool(parsed.get("complete", False))
@@ -278,9 +233,4 @@ def interview_profile(
             used_fallback=False,
         )
     except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
-        return OllamaInterviewResult(
-            reply=_question_for_missing_fields(inferred_profile),
-            profile=inferred_profile,
-            complete=not missing_profile_fields(inferred_profile),
-            used_fallback=True,
-        )
+        raise

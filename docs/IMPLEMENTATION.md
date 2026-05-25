@@ -116,6 +116,15 @@ Files changed:
 Summary: Switch Ollama interview from JSON-only output to natural chat replies
 Details: The assistant now talks in plain text, while the app still infers and merges profile scores separately. This avoids brace-only replies and keeps the chat layer usable even when the model does not strictly follow a JSON format.
 
+Date: 2026-05-25
+Author: RV
+Area: Backend / UI
+Files changed:
+- api/ollama.py
+- streamlit_app.py
+Summary: Remove Ollama fallbacks so debug failures surface directly
+Details: The chat flow now raises errors when Ollama is unavailable or returns unusable output. The UI no longer tells the user there is a silent fallback path; it now reports that Ollama must be running for chat debugging.
+
 
 Outstanding / Next Steps
 -----------------------

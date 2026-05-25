@@ -32,10 +32,10 @@ def main():
 
     ollama_ready = ollama_is_available()
     resolved_model = resolve_chat_model()
-    st.info(
-        "Ollama is available locally and can interview the user." if ollama_ready else
-        "Ollama is not reachable right now, so the chat layer will fall back to simple prompts."
-    )
+    if ollama_ready:
+        st.info("Ollama is available locally and can interview the user.")
+    else:
+        st.error("Ollama is not reachable right now. Start Ollama before using the chat flow; errors will surface directly for debugging.")
     st.caption(f"Chat model in use: {resolved_model}")
 
     st.divider()
