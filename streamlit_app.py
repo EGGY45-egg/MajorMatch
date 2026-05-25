@@ -11,6 +11,7 @@ from app_logic import (
     profile_is_empty,
     profile_to_text,
     recommend_track,
+    suggest_career_context,
     suggest_courses,
     summarize_matches,
 )
@@ -155,6 +156,30 @@ def main():
         st.success(f"Predicted track: {recommendation['track']}")
         st.progress(min(float(recommendation["confidence"]), 1.0))
         st.caption(f"Confidence score: {recommendation['confidence']:.2f}")
+
+        st.subheader("Career context")
+        career_context = suggest_career_context(str(recommendation["track"]))
+        if career_context.available:
+            left_metric, right_metric = st.columns(2)
+            with left_metric:
+                st.metric("Job count", f"{career_context.job_count:,}" if career_context.job_count is not None else "N/A")
+            with right_metric:
+                if career_context.salary_min is not None and career_context.salary_max is not None:
+                    st.metric(
+                        f"Salary range ({career_context.salary_currency})",
+                        f"{career_context.salary_min:,} - {career_context.salary_max:,}",
+                    )
+                else:
+                    st.metric(f"Salary range ({career_context.salary_currency})", "N/A")
+
+            if career_context.top_job_titles:
+                st.caption("Top job titles: " + ", ".join(career_context.top_job_titles))
+            if career_context.top_companies:
+                st.caption("Top companies: " + ", ".join(career_context.top_companies))
+            if career_context.query_url:
+                st.caption(f"Source: {career_context.source} | Query URL prepared")
+        else:
+            st.info(career_context.note or "Job-market context is not available yet.")
 
         st.subheader("Suggested course search")
         auto_query = build_course_query(str(recommendation["track"]))

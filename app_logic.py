@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence
 
+from api.jobs import get_career_context
 from api.predict import predict_track
 from api.search import semantic_search
 
@@ -77,6 +78,10 @@ def recommend_track(profile: ProfileInput) -> Dict[str, object]:
 
 def suggest_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
     return semantic_search(query, top_k=top_k)
+
+
+def suggest_career_context(track: str, location: str = "United States"):
+    return get_career_context(track, location=location)
 
 
 def build_course_query(track: str) -> str:
