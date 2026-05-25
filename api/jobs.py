@@ -97,7 +97,7 @@ def _build_query_url(track: str, location: str, results_per_page: int = 10) -> s
     }
     if location.strip():
         params["where"] = location.strip()
-    return f"{ADZUNA_BASE_URL}/{country}/1?{urlencode(params)}"
+    return f"{ADZUNA_BASE_URL}/{country}/search/1?{urlencode(params)}"
 
 
 def _fetch_json(url: str) -> Dict[str, Any]:

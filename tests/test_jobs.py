@@ -38,3 +38,16 @@ def test_get_career_context_missing_credentials(monkeypatch):
     assert context.available is False
     assert context.source == "Adzuna"
     assert "ADZUNA_APP_ID" in (context.note or "")
+
+
+def test_build_query_url_uses_search_endpoint(monkeypatch):
+    monkeypatch.setattr(jobs_api, "ADZUNA_BASE_URL", "https://api.adzuna.com/v1/api/jobs")
+    monkeypatch.setattr(jobs_api, "ADZUNA_COUNTRY", "us")
+    monkeypatch.setattr(jobs_api, "ADZUNA_APP_ID", "id")
+    monkeypatch.setattr(jobs_api, "ADZUNA_APP_KEY", "key")
+
+    url = jobs_api._build_query_url("Software Engineer", "United States")
+
+    assert "/us/search/1?" in url
+    assert "app_id=id" in url
+    assert "app_key=key" in url
