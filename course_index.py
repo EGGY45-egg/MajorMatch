@@ -94,13 +94,24 @@ def ensure_database() -> None:
 def load_course_corpus(csv_path: Path | str = DEFAULT_COURSE_CSV) -> List[Dict[str, str]]:
     path = Path(csv_path)
     rows: List[Dict[str, str]] = []
-    with path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            title = (row.get("title") or "").strip()
-            description = (row.get("description") or "").strip()
-            if title and description:
-                rows.append({"title": title, "description": description})
+
+    # If a directory is provided, read all CSV files inside it.
+    files = []
+    if path.is_dir():
+        files = sorted(path.glob("*.csv"))
+    else:
+        files = [path]
+
+    for file in files:
+        if not file.exists():
+            continue
+        with file.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                title = (row.get("title") or "").strip()
+                description = (row.get("description") or "").strip()
+                if title and description:
+                    rows.append({"title": title, "description": description})
     return rows
 
 

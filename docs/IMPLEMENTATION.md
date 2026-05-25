@@ -40,29 +40,6 @@ Implementation Log
 
 Date: 2026-05-25
 Author: RV
-Area: Backend / Data / Infra
-Files changed:
-- course_index.py
-- scripts/embed.py
-- api/search.py
-- api/ollama.py
-- app_logic.py
-- streamlit_app.py
-Summary: Make embeddings robust across developer environments and fix import/indexing issues
-Details: Added a portable embedding storage and retrieval path so the project runs without the `pgvector` server extension during development. Changes include:
-
-- Store embeddings in Postgres as `float[]` (`ARRAY(Float)`) to avoid table-creation failures when the `vector` extension is not installed.
-- Add a Python-side cosine similarity fallback that ranks nearest neighbors by loading embeddings into memory; this keeps search functional for small-to-medium corpora without pgvector.
-- Ensure `course_to_dict()` returns stored embeddings so the fallback search can compute similarity correctly.
-- Update `scripts/embed.py` to add the project root to `sys.path` so `course_index` imports work when the script is run from `scripts/`.
-- Provide a default local `DATABASE_URL` fallback (postgres/postgres@localhost:5432/semantic_search) when the env var is not set to simplify initial developer setup.
-- Fixed Ollama adapter behavior and kept chat-first interview flow; updated error surfacing so failures are visible during debugging.
-
-Next steps: enable/install `pgvector` on the DB server for better scale/performance (or run a pgvector-ready Postgres image), optionally add an `ollama` embedding provider to use `nomic-embed-text:latest`, and add a migration to convert `float[]` embeddings to `vector` if/when the extension becomes available.
-
-
-Date: 2026-05-25
-Author: RV
 Area: Scaffold
 Files changed:
 - streamlit_app.py
@@ -161,13 +138,24 @@ Files changed:
 Summary: Added pgvector-backed embeddings, semantic search, and PCA/UMAP/t-SNE projections
 Details: Course records are now stored in PostgreSQL with pgvector embeddings and 2D coordinates for PCA, UMAP, and t-SNE. The Streamlit app can rebuild the index from the CSV corpus and render a projection scatter plot for any of the three methods.
 
+Date: 2026-05-25
+Author: RV
+Area: Backend / Data / Infra
+Files changed:
+- course_index.py
+- scripts/embed.py
+- api/search.py
+- api/ollama.py
+- app_logic.py
+- streamlit_app.py
+Summary: Make embeddings robust across developer environments and fix import/indexing issues
+Details: Attempts to enable the vector extension on the DB but falls back to storing embeddings as float[] (ARRAY(Float)) when the extension is unavailable. Similarity search now uses a Python cosine-similarity fallback (loading stored embeddings into memory) so search works without pgvector. The course indexer and embed.py were refactored so the database is created/initialized before use and the embed script can import project modules reliably.
+
 
 Outstanding / Next Steps
 -----------------------
 
 - Replace `api/predict.py` with the teammate's serialized model or an API wrapper.
-- Implement embeddings using `sentence-transformers` and store in PostgreSQL + `pgvector`.
-- Replace `api/search.py` with an embeddings-backed retrieval function.
 - Add `docs/ARCHITECTURE.md` and `docs/DEPLOY.md` if we finalize infra choices.
 
 Notes
@@ -175,3 +163,5 @@ Notes
 
 - Keep entries short and chronological (newest at top).
 - Link to specific files when referring to code (use workspace-relative paths).
+
+- CSV header expectations: each CSV indexed by `scripts/embed.py` must include `title` and `description` columns (case-insensitive). Rows missing those fields are skipped; use UTF-8 encoding and standard CSV quoting.

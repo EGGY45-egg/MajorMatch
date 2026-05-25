@@ -7,7 +7,10 @@ from api.search import semantic_search
 
 
 BASE_DIR = Path(__file__).resolve().parent
-COURSE_CSV = BASE_DIR / "data" / "courses.csv"
+# Point to the data directory — support multiple CSV files under `data/`.
+DATA_DIR = BASE_DIR / "data"
+# Collect CSV files if present; callers can use `DATA_DIR` or `COURSE_CSVS`.
+COURSE_CSVS = sorted([p for p in DATA_DIR.glob("*.csv")]) if DATA_DIR.exists() else []
 PROFILE_FIELDS = ("coding", "math", "design")
 
 
