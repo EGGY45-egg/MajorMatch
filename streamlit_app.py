@@ -19,25 +19,30 @@ def _render_tool_prediction(prediction):
 
 def _render_tool_career_context(career_context):
     st.markdown("### Career Context")
-    if career_context.available:
+    available = bool(career_context.get("available"))
+    if available:
+        job_count = career_context.get("job_count")
+        salary_min = career_context.get("salary_min")
+        salary_max = career_context.get("salary_max")
+        salary_currency = career_context.get("salary_currency") or "USD"
         left_metric, right_metric = st.columns(2)
         with left_metric:
-            st.metric("Job count", f"{career_context.job_count:,}" if career_context.job_count is not None else "N/A")
+            st.metric("Job count", f"{job_count:,}" if job_count is not None else "N/A")
         with right_metric:
-            if career_context.salary_min is not None and career_context.salary_max is not None:
+            if salary_min is not None and salary_max is not None:
                 st.metric(
-                    f"Salary range ({career_context.salary_currency})",
-                    f"{career_context.salary_min:,} - {career_context.salary_max:,}",
+                    f"Salary range ({salary_currency})",
+                    f"{salary_min:,} - {salary_max:,}",
                 )
             else:
-                st.metric(f"Salary range ({career_context.salary_currency})", "N/A")
+                st.metric(f"Salary range ({salary_currency})", "N/A")
 
-        if career_context.top_job_titles:
-            st.caption("Top job titles: " + ", ".join(career_context.top_job_titles))
-        if career_context.top_companies:
-            st.caption("Top companies: " + ", ".join(career_context.top_companies))
+        if career_context.get("top_job_titles"):
+            st.caption("Top job titles: " + ", ".join(career_context.get("top_job_titles", [])))
+        if career_context.get("top_companies"):
+            st.caption("Top companies: " + ", ".join(career_context.get("top_companies", [])))
     else:
-        st.info(career_context.note or "Job-market context is not available yet.")
+        st.info(career_context.get("note") or "Job-market context is not available yet.")
 
 
 def _render_semantic_search(search_artifact):
