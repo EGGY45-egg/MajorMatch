@@ -15,6 +15,7 @@ from app_logic import (
     suggest_courses,
     summarize_matches,
 )
+from api.orchestrator import run_orchestrated_assistant
 from api.ollama import interview_profile, ollama_is_available, resolve_chat_model
 from api.search import CourseIndexError, get_course_projection_points, rebuild_index
 
@@ -180,6 +181,65 @@ def main():
                 st.caption(f"Source: {career_context.source} | Query URL prepared")
         else:
             st.info(career_context.note or "Job-market context is not available yet.")
+
+        st.subheader("Orchestrated assistant")
+        if "orchestrator_prompt" not in st.session_state:
+            st.session_state["orchestrator_prompt"] = ""
+        if "orchestrator_result" not in st.session_state:
+            st.session_state["orchestrator_result"] = None
+
+        st.caption("Ask one question and let Ollama decide whether to call prediction, job context, and course search tools.")
+        orchestrator_prompt = st.text_input(
+            "Ask MajorMatch",
+            value=st.session_state["orchestrator_prompt"],
+            placeholder="What should I study if I like coding but want good job prospects?",
+        )
+        run_orchestrator = st.button("Run orchestrator", type="primary")
+
+        if run_orchestrator and orchestrator_prompt.strip():
+            try:
+                with st.spinner("Letting Ollama call the MajorMatch tools..."):
+                    orchestrator_result = run_orchestrated_assistant(
+                        orchestrator_prompt,
+                        active_profile,
+                        location="United States",
+                    )
+                st.session_state["orchestrator_prompt"] = orchestrator_prompt
+                st.session_state["orchestrator_result"] = orchestrator_result
+            except Exception as error:
+                st.exception(error)
+
+        orchestrator_result = st.session_state.get("orchestrator_result")
+        if orchestrator_result:
+            st.markdown(orchestrator_result.reply)
+
+            artifacts = orchestrator_result.artifacts or {}
+            prediction = artifacts.get("prediction") or {}
+            career_context_artifact = artifacts.get("career_context") or {}
+            course_artifact = artifacts.get("courses") or {}
+
+            if prediction:
+                st.caption(f"Orchestrator predicted: {prediction.get('track', 'N/A')} (confidence {prediction.get('confidence', 0):.2f})")
+
+            if career_context_artifact:
+                if career_context_artifact.get("available"):
+                    st.caption(
+                        "Career context: "
+                        f"{career_context_artifact.get('job_count', 'N/A')} jobs | "
+                        f"{career_context_artifact.get('salary_min', 'N/A')} - {career_context_artifact.get('salary_max', 'N/A')} {career_context_artifact.get('salary_currency', '')}"
+                    )
+                else:
+                    st.caption(career_context_artifact.get("note") or "Career context unavailable.")
+
+            if course_artifact.get("results"):
+                st.caption("Top course matches from tool call:")
+                for result in course_artifact["results"][:3]:
+                    st.write(f"- {result.get('title', 'Untitled')}")
+
+            with st.expander("Tool trace", expanded=False):
+                for trace_item in orchestrator_result.tool_trace:
+                    st.write(f"{trace_item.name}: {trace_item.arguments}")
+                    st.json(trace_item.result)
 
         st.subheader("Suggested course search")
         auto_query = build_course_query(str(recommendation["track"]))

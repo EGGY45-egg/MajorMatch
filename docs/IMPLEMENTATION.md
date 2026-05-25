@@ -38,6 +38,7 @@ Details: Created minimal Streamlit app, prediction/search stubs, and example cou
 Implementation Log
 ------------------
 
+
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -195,6 +196,17 @@ Files changed:
 - tests/test_jobs.py
 Summary: Integrate an Adzuna-backed career context API into the user flow
 Details: Added a small job-market adapter in `api/jobs.py` that queries Adzuna using `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`, derives a stable career-context payload (`job_count`, salary range, top job titles, top companies), and degrades gracefully when credentials are missing. The Streamlit app now renders a dedicated career-context section immediately after the track recommendation so the user can see market data before exploring courses. Added pytest coverage for the happy path and the missing-credential fallback. Next: wire the same career-context tool into the Ollama orchestrator so the assistant can decide when to call it.
+
+Date: 2026-05-25
+Author: RV
+Area: Backend / UI / ML
+Files changed:
+- api/ollama.py
+- api/orchestrator.py
+- streamlit_app.py
+- tests/test_orchestrator.py
+Summary: Add an Ollama tool-calling orchestrator for prediction, job context, and course search
+Details: Introduced a shared Ollama `chat_completion()` helper that supports tool definitions, then added `api/orchestrator.py` to run a tool-calling conversation loop using the three main MajorMatch capabilities: career-track prediction, Adzuna job context, and semantic course search. The Streamlit app now includes a dedicated orchestrated-assistant panel so users can ask one question and let Ollama decide which tools to invoke. Added pytest coverage that simulates a multi-tool conversation and verifies the tool trace and returned artifacts. Next: refine the prompt/tool schema and consider showing orchestrator artifacts in a more compact UI card layout.
 
 
 

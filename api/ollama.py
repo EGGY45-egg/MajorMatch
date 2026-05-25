@@ -4,7 +4,7 @@ import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from app_logic import (
     coerce_profile_values,
@@ -81,6 +81,32 @@ def _post_json(url: str, payload: Dict[str, object]) -> Dict[str, object]:
     )
     with urllib.request.urlopen(request, timeout=60) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def chat_completion(
+    messages: List[Dict[str, str]],
+    model: Optional[str] = None,
+    *,
+    tools: Optional[List[Dict[str, Any]]] = None,
+    options: Optional[Dict[str, Any]] = None,
+    base_url: str = OLLAMA_BASE_URL,
+) -> Dict[str, Any]:
+    """Send a chat completion request to Ollama.
+
+    This shared helper lets the interview flow and the agent orchestrator use
+    the same transport while optionally enabling tool calling.
+    """
+    resolved_model = resolve_chat_model(model, base_url)
+    payload: Dict[str, Any] = {
+        "model": resolved_model,
+        "messages": messages,
+        "stream": False,
+    }
+    if tools:
+        payload["tools"] = tools
+    if options:
+        payload["options"] = options
+    return _post_json(f"{base_url}/api/chat", payload)
 
 
 def _extract_json_object(text: str) -> Optional[Dict[str, object]]:
@@ -178,8 +204,6 @@ def interview_profile(
     if not ollama_is_available():
         raise ConnectionError(f"Ollama is not reachable at {OLLAMA_BASE_URL}")
 
-    resolved_model = resolve_chat_model(model)
-
     system_prompt = (
         "You are MajorMatch, a concise interview assistant for students. "
         "Have a natural conversation with the user and ask one short follow-up question at a time. "
@@ -200,15 +224,8 @@ def interview_profile(
         }
     )
 
-    payload = {
-        "model": resolved_model,
-        "messages": payload_messages,
-        "stream": False,
-        "options": {"temperature": 0.2},
-    }
-
     try:
-        response = _post_json(f"{OLLAMA_BASE_URL}/api/chat", payload)
+        response = chat_completion(payload_messages, model=model, options={"temperature": 0.2})
         content = response.get("message", {}).get("content", "")
         parsed = _extract_json_object(content)
         profile_updates = parsed.get("profile", {}) if parsed else {}
