@@ -17,8 +17,43 @@ def load_courses(path: str = "data/courses.csv") -> List[Dict]:
 
 
 def semantic_search(query: str, courses: List[Dict] | None = None, top_k: int = 5) -> List[Dict]:
-    del courses
-    return search_courses(query, top_k=top_k)
+    # Normalize inputs
+    try:
+        q = "" if query is None else str(query)
+    except Exception:
+        q = ""
+    try:
+        k = max(1, int(top_k))
+    except Exception:
+        k = 5
+
+    # Delegate to course_index.search_courses which handles embeddings & fallback
+    raw = search_courses(q, top_k=k)
+
+    results: List[Dict] = []
+    for item in raw:
+        # item expected to have title, description, embedding, id and optionally score
+        score = float(item.get("score", 0.0)) if item.get("score") is not None else 0.0
+        # normalize cosine [-1,1] to [0,1]
+        normalized = (score + 1.0) / 2.0
+        out = {
+            "id": item.get("id"),
+            "title": item.get("title"),
+            "description": item.get("description"),
+            "score": float(score),
+            "score_normalized": float(normalized),
+            "source": "db",
+            # include projection coords if available
+            "pca_x": item.get("pca_x"),
+            "pca_y": item.get("pca_y"),
+            "umap_x": item.get("umap_x"),
+            "umap_y": item.get("umap_y"),
+            "tsne_x": item.get("tsne_x"),
+            "tsne_y": item.get("tsne_y"),
+        }
+        results.append(out)
+
+    return results
 
 
 def get_course_projection_points(method: str = "pca"):

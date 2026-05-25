@@ -285,7 +285,14 @@ def course_to_dict(course: Course) -> Dict[str, str]:
     # server doesn't support pgvector. The embedding is stored as a list of
     # floats (Postgres float[]), so return it as-is.
     return {
+        "id": int(course.id) if course.id is not None else None,
         "title": course.title,
         "description": course.description,
         "embedding": list(course.embedding) if course.embedding is not None else None,
+        "pca_x": float(course.pca_x) if course.pca_x is not None else None,
+        "pca_y": float(course.pca_y) if course.pca_y is not None else None,
+        "umap_x": float(course.umap_x) if course.umap_x is not None else None,
+        "umap_y": float(course.umap_y) if course.umap_y is not None else None,
+        "tsne_x": float(course.tsne_x) if course.tsne_x is not None else None,
+        "tsne_y": float(course.tsne_y) if course.tsne_y is not None else None,
     }

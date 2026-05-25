@@ -40,6 +40,20 @@ Implementation Log
 
 Date: 2026-05-25
 Author: RV
+Area: Backend / Data / API
+Files changed:
+- course_index.py
+- api/search.py
+- scripts/embed.py
+- app_logic.py
+- streamlit_app.py
+- docs/IMPLEMENTATION.md
+Summary: Implement semantic search API and make embedding/indexing robust
+Details: Implemented a stable `semantic_search()` API wrapper that validates inputs, strips embeddings from responses, and returns consistent metadata (`id`, `title`, `description`, `score`, `score_normalized`, and projection coordinates). Refactored embedding storage to use `float[]` (`ARRAY(Float)`) for portability, added a Python cosine-similarity fallback when server-side `pgvector` is unavailable, and updated the indexer (`scripts/embed.py`) to support indexing multiple CSV files under `data/`. Also fixed import issues by ensuring the embed script can import project modules and added CSV header expectations to the docs. Next: add smoke tests and UI polish for provider/fallback visibility.
+
+
+Date: 2026-05-25
+Author: RV
 Area: Scaffold
 Files changed:
 - streamlit_app.py
