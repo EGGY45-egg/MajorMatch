@@ -151,7 +151,6 @@ Files changed:
 Summary: Make embeddings robust across developer environments and fix import/indexing issues
 Details: Attempts to enable the vector extension on the DB but falls back to storing embeddings as float[] (ARRAY(Float)) when the extension is unavailable. Similarity search now uses a Python cosine-similarity fallback (loading stored embeddings into memory) so search works without pgvector. The course indexer and embed.py were refactored so the database is created/initialized before use and the embed script can import project modules reliably.
 
-
 Date: 2026-05-25
 Author: RV
 Area: Backend / Data / API
@@ -174,6 +173,17 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Show query point and highlight top-match in projection plot
 Details: Added `project_courses_with_query()` to `course_index.py` to compute 2D projections that include the user's query so points share a consistent coordinate system. Updated `streamlit_app.py` to render the query point on the projection and color the top match differently (colors: course=blue, top_match=red, query=green). Also surfaced embedding model name and `pgvector` availability in the UI so users can see whether the app is using the in-Python similarity fallback or server vector ops. Note: PCA/UMAP/TSNE projections are computed on-demand and may add CPU cost for large corpora; next steps include annotating the top match, increasing query marker size, and caching projection reducers for faster UI response.
+
+Date: 2026-05-25
+Author: RV
+Area: Docs / Validation
+Files changed:
+- tests/test_course_index.py
+- tests/test_api_search.py
+- tests/README.md
+- requirements.txt
+Summary: Add a dedicated tests directory with pytest coverage for corpus loading and semantic search
+Details: Created a new `tests/` package with lightweight pytest checks that cover CSV corpus loading, the `semantic_search()` result shape, and the query projection helper. Added `pytest` to `requirements.txt` and verified the suite with `python -m pytest` inside the project virtual environment. The tests are intentionally isolated from the database by monkeypatching the core helpers so they run quickly and reliably in a capstone-sized corpus.
 
 
 Outstanding / Next Steps
