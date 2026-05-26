@@ -131,17 +131,61 @@ def build_tool_schemas() -> List[Dict[str, Any]]:
 
 
 def _parse_tool_arguments(arguments: Any) -> Dict[str, Any]:
+    # Normalize dict-like inputs and try to recover from nested/serialized payloads
     if isinstance(arguments, dict):
-        return arguments
-    if not arguments:
+        parsed: Dict[str, Any] = dict(arguments)
+    elif not arguments:
         return {}
-    if isinstance(arguments, str):
+    elif isinstance(arguments, str):
         try:
-            parsed = json.loads(arguments)
-            return parsed if isinstance(parsed, dict) else {}
+            loaded = json.loads(arguments)
+            parsed = loaded if isinstance(loaded, dict) else {}
         except json.JSONDecodeError:
             return {}
-    return {}
+    else:
+        return {}
+
+    # Some models/agents return parameters nested inside arrays or as JSON-encoded strings.
+    # Attempt to unwrap common wrappers so callers can find keys like 'track', 'user_query', etc.
+    # Example malformed shapes handled:
+    # - {'object': "[{'track': 'Healthcare', 'location': 'United States'}]"}
+    # - {'parameters': [{'object': "{...}"}]}
+    # - {'0': {'track': 'X'}}
+
+    # If single key 'object' contains a JSON string or list, try to decode it.
+    if "object" in parsed and isinstance(parsed["object"], str):
+        try:
+            inner = json.loads(parsed["object"])
+            if isinstance(inner, list) and inner:
+                # if list of dicts, merge first dict
+                if isinstance(inner[0], dict):
+                    parsed.update(inner[0])
+            elif isinstance(inner, dict):
+                parsed.update(inner)
+        except json.JSONDecodeError:
+            pass
+
+    # If any values are JSON strings, try to decode them too.
+    for k, v in list(parsed.items()):
+        if isinstance(v, str) and v.strip().startswith("{"):
+            try:
+                decoded = json.loads(v)
+                if isinstance(decoded, dict):
+                    parsed[k] = decoded
+                    parsed.update(decoded)
+            except json.JSONDecodeError:
+                pass
+        if isinstance(v, list) and v and isinstance(v[0], dict):
+            # flatten single-item parameter lists
+            parsed.update(v[0])
+
+    # Also handle 'parameters' wrappers
+    if "parameters" in parsed and isinstance(parsed["parameters"], list) and parsed["parameters"]:
+        first = parsed["parameters"][0]
+        if isinstance(first, dict):
+            parsed.update(first)
+
+    return {k: v for k, v in parsed.items()}
 
 
 def _extract_tool_calls(message: Dict[str, Any]) -> List[Dict[str, Any]]:

@@ -37,6 +37,15 @@ Details: Created minimal Streamlit app, prediction/search stubs, and example cou
 
 Implementation Log
 ------------------
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Robust tool-argument parsing and sanitization; fixed UI header leakage
+Details: Improved `_parse_tool_arguments()` in `api/orchestrator.py` to decode nested and serialized parameter shapes (handles JSON strings in `object`/`parameters` fields and flattens single-item lists), ensuring tools receive the intended keys (`track`, `location`, `user_query`, `top_k`). Left `_clean_assistant_text()` and deterministic greeting/identity bypasses intact. Updated tests and validated the change by running the test suite — all tests pass (11 passed). Next: add a targeted unit test for malformed tool-call shapes and optionally add runtime logging for malformed calls.
 
 
 
@@ -291,6 +300,15 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Added a friendly identity reply for common self-introduction questions
 Details: The orchestrator now detects common user questions about the assistant's identity (e.g., "who are you?", "introduce yourself") and responds with a friendly introduction instead of a generic greeting. This adds a bit of personality to the assistant and makes the chat feel more engaging. Updated the test to expect the new identity reply when those questions are asked.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+
 
 Notes
 -----
