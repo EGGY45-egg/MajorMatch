@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from app_logic import ProfileInput, coerce_profile_values, profile_to_text, recommend_track, suggest_career_context, suggest_courses
-from course_index import project_courses_with_query
+from course_index import search_courses_with_projection
 from api.ollama import chat_completion, resolve_chat_model
 
 
@@ -242,48 +242,7 @@ def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int],
         projection_method = str(arguments.get("projection_method") or "pca").strip().lower() or "pca"
         if projection_method == "tnse":
             projection_method = "tsne"
-        results = suggest_courses(query, top_k=top_k)
-
-        projection_methods: Dict[str, Dict[str, Any]] = {}
-        for method in ("pca", "umap", "tsne"):
-            try:
-                course_points, query_point = project_courses_with_query(query, method=method)
-                projection_methods[method] = {
-                    "available": True,
-                    "method": method,
-                    "courses": [
-                        {
-                            "id": point.id,
-                            "title": point.title,
-                            "description": point.description,
-                            "x": point.x,
-                            "y": point.y,
-                        }
-                        for point in course_points
-                    ],
-                    "query_point": None
-                    if query_point is None
-                    else {
-                        "id": query_point.id,
-                        "title": query_point.title,
-                        "description": query_point.description,
-                        "x": query_point.x,
-                        "y": query_point.y,
-                    },
-                }
-            except Exception as error:
-                projection_methods[method] = {
-                    "available": False,
-                    "method": method,
-                    "error": str(error),
-                }
-
-        selected_projection = projection_methods.get(projection_method) or projection_methods.get("pca", {})
-        if selected_projection.get("available") is not True:
-            selected_projection = next(
-                (value for value in projection_methods.values() if value.get("available")),
-                selected_projection,
-            )
+        results, selected_projection = search_courses_with_projection(query, top_k=top_k, method=projection_method)
 
         return {
             "query": query,
@@ -291,7 +250,6 @@ def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int],
             "results": results,
             "projection": {
                 **selected_projection,
-                "methods": projection_methods,
             },
         }
 

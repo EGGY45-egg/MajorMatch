@@ -38,46 +38,60 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
     )
     monkeypatch.setattr(
         orchestrator,
-        "suggest_courses",
-        lambda query, top_k=5: [
-            {
-                "id": 1,
-                "title": "Web Development with Flask",
-                "description": "Build web apps with Flask",
-                "score": 0.9,
-                "score_normalized": 0.95,
-                "source": "db",
-            }
-        ],
-    )
-    monkeypatch.setattr(
-        orchestrator,
-        "project_courses_with_query",
-        lambda query, method="pca": (
+        "search_courses_with_projection",
+        lambda query, top_k=5, method="pca": (
             [
-                type(
-                    "FakePoint",
-                    (),
+                {
+                    "id": 1,
+                    "title": "Web Development with Flask",
+                    "description": "Build web apps with Flask",
+                    "score": 0.9,
+                    "score_normalized": 0.95,
+                    "source": "db",
+                }
+            ],
+            {
+                "available": True,
+                "method": method,
+                "courses": [
                     {
                         "id": 1,
                         "title": "Web Development with Flask",
                         "description": "Build web apps with Flask",
                         "x": 1.0,
                         "y": 2.0,
-                    },
-                )()
-            ],
-            type(
-                "FakePoint",
-                (),
-                {
+                    }
+                ],
+                "query_point": {
                     "id": -1,
                     "title": "(query)",
                     "description": query,
                     "x": 0.0,
                     "y": 0.0,
                 },
-            )(),
+                "methods": {
+                    method: {
+                        "available": True,
+                        "method": method,
+                        "courses": [
+                            {
+                                "id": 1,
+                                "title": "Web Development with Flask",
+                                "description": "Build web apps with Flask",
+                                "x": 1.0,
+                                "y": 2.0,
+                            }
+                        ],
+                        "query_point": {
+                            "id": -1,
+                            "title": "(query)",
+                            "description": query,
+                            "x": 0.0,
+                            "y": 0.0,
+                        },
+                    }
+                },
+            },
         ),
     )
 

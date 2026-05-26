@@ -376,6 +376,16 @@ Files changed:
 Summary: Surface Ollama HTTP error bodies and fall back to a tool-capable model when tools are requested
 Details: Added enhanced error handling in api/ollama.py to read and surface HTTP error bodies from the Ollama server so validation failures (e.g., "does not support tools") are visible to the developer. Implemented a fallback selection in chat_completion() that prefers an available model known to support function/tool calling when the request includes tools. Added scripts/test_ollama_tools.py to reproduce the issue locally and validate the fallback. Verified the repro script locally; tool-enabled requests now succeed by falling back to llama3.2:1b in the tested environment.
 
+Date: 2026-05-26
+Author: RV
+Area: Backend / Performance / Docs
+Files changed:
+- course_index.py
+- api/orchestrator.py
+- tests/test_orchestrator.py
+Summary: Cache the course corpus and remove duplicate semantic-search embedding work
+Details: Added in-memory caching for the loaded course corpus and introduced a combined search-plus-projection helper so each semantic-search request reuses one corpus load and one query embedding pass. Updated the orchestrator to call the combined helper instead of running separate search and projection passes, and adjusted the orchestrator test to stub the new fast path. Verified the optimization with the full test suite (14 passed).
+
 
 Notes
 -----

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import os
+from functools import lru_cache
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
@@ -213,7 +214,54 @@ def rebuild_course_index(csv_path: Path | str = DEFAULT_COURSE_CSV) -> int:
             )
             session.add(course)
         session.commit()
+    clear_course_caches()
     return len(rows)
+
+
+@lru_cache(maxsize=1)
+def _cached_course_rows() -> tuple[dict, ...]:
+    return tuple(list_courses())
+
+
+@lru_cache(maxsize=1)
+def _cached_course_dataset() -> tuple[tuple[dict, ...], np.ndarray]:
+    courses = _cached_course_rows()
+    if not courses:
+        return courses, np.empty((0, 0), dtype=np.float32)
+
+    embeddings = np.asarray([course.get("embedding") for course in courses], dtype=np.float32)
+    if embeddings.ndim == 1:
+        embeddings = np.stack(embeddings)
+    return courses, embeddings
+
+
+def clear_course_caches() -> None:
+    _cached_course_rows.cache_clear()
+    _cached_course_dataset.cache_clear()
+
+
+def _rank_courses(query: str, top_k: int) -> tuple[List[Dict[str, str]], np.ndarray, tuple[dict, ...]]:
+    courses, embeddings = _cached_course_dataset()
+    if not courses:
+        return [], np.empty((0, 0), dtype=np.float32), courses
+
+    query_embedding = compute_embeddings([query])[0].astype(np.float32)
+    q = np.asarray(query_embedding, dtype=np.float32)
+
+    def cosine(a, b):
+        a_norm = a / (np.linalg.norm(a) + 1e-12)
+        b_norm = b / (np.linalg.norm(b) + 1e-12)
+        return float(np.dot(a_norm, b_norm))
+
+    scores = [cosine(q, emb) for emb in embeddings]
+    ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k]
+    results = []
+    for idx, score in ranked:
+        item = dict(courses[idx])
+        item["score"] = score
+        results.append(item)
+
+    return results, q, courses
 
 
 def _get_projection_columns(method: str):
@@ -233,31 +281,7 @@ def search_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
         return list_courses(limit=top_k)
 
     ensure_database()
-    query_embedding = compute_embeddings([query])[0].tolist()
-    session_factory = get_session_factory()
-    # Compute similarity in Python by loading course embeddings into memory.
-    all_courses = list_courses()
-    if not all_courses:
-        return []
-    embeddings = np.asarray([c.get("embedding") for c in all_courses], dtype=np.float32)
-    # Depending on storage shape, embeddings may be nested lists
-    if embeddings.ndim == 1:
-        embeddings = np.stack(embeddings)
-    q = np.asarray(query_embedding, dtype=np.float32)
-    # cosine similarity
-    def cosine(a, b):
-        a_norm = a / (np.linalg.norm(a) + 1e-12)
-        b_norm = b / (np.linalg.norm(b) + 1e-12)
-        return float(np.dot(a_norm, b_norm))
-
-    scores = [cosine(q, emb) for emb in embeddings]
-    ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k]
-    results = []
-    for idx, score in ranked:
-        item = all_courses[idx]
-        item_copy = dict(item)
-        item_copy["score"] = score
-        results.append(item_copy)
+    results, _, _ = _rank_courses(query, top_k)
     return results
 
 
@@ -305,24 +329,23 @@ def project_courses_with_query(query: str, method: str = "pca"):
     and query_point is a CoursePoint with id=-1 and title="(query)".
     """
     ensure_database()
-    # Load courses and their embeddings
-    courses = list_courses()
+    # Load courses and their embeddings from the in-memory cache.
+    courses, embeddings = _cached_course_dataset()
     if not courses:
         return [], None
 
-    # Build embeddings array
-    embeddings = []
-    for c in courses:
-        emb = c.get("embedding")
-        if emb is None:
-            # If any course lacks embedding, rebuild index first
-            raise CourseIndexError("Course embeddings missing; rebuild the index first.")
-        embeddings.append(np.asarray(emb, dtype=np.float32))
-
-    # Compute query embedding
     q_emb = compute_embeddings([query])[0].astype(np.float32)
+    return _project_courses_with_embedding(courses, embeddings, q_emb, query, method)
 
-    stacked = np.vstack(embeddings + [q_emb])
+
+def _project_courses_with_embedding(
+    courses: tuple[dict, ...],
+    embeddings: np.ndarray,
+    query_embedding: np.ndarray,
+    query_text: str,
+    method: str,
+):
+    stacked = np.vstack([embeddings, query_embedding])
     projected = _projection_matrix(stacked, method)
 
     course_points: List[CoursePoint] = []
@@ -331,11 +354,74 @@ def project_courses_with_query(query: str, method: str = "pca"):
         y = float(projected[idx][1])
         course_points.append(CoursePoint(id=c.get("id"), title=c.get("title"), description=c.get("description"), x=x, y=y))
 
-    # Query point is last
     qx = float(projected[-1][0])
     qy = float(projected[-1][1])
-    query_point = CoursePoint(id=-1, title="(query)", description=query, x=qx, y=qy)
+    query_point = CoursePoint(id=-1, title="(query)", description=query_text, x=qx, y=qy)
     return course_points, query_point
+
+
+def search_courses_with_projection(query: str, top_k: int = 5, method: str = "pca"):
+    """Return search matches plus a single projection view for the same query.
+
+    This shares the cached course corpus and computes the query embedding once.
+    """
+    if not query.strip():
+        results = list_courses(limit=top_k)
+        return results, {"available": False, "method": method, "courses": [], "query_point": None, "methods": {}}
+
+    ensure_database()
+    results, query_embedding, courses = _rank_courses(query, top_k)
+    _, embeddings = _cached_course_dataset()
+    course_points, query_point = _project_courses_with_embedding(courses, embeddings, query_embedding, query, method)
+    projection = {
+        "available": True,
+        "method": method,
+        "courses": [
+            {
+                "id": point.id,
+                "title": point.title,
+                "description": point.description,
+                "x": point.x,
+                "y": point.y,
+            }
+            for point in course_points
+        ],
+        "query_point": None
+        if query_point is None
+        else {
+            "id": query_point.id,
+            "title": query_point.title,
+            "description": query_point.description,
+            "x": query_point.x,
+            "y": query_point.y,
+        },
+        "methods": {
+            method: {
+                "available": True,
+                "method": method,
+                "courses": [
+                    {
+                        "id": point.id,
+                        "title": point.title,
+                        "description": point.description,
+                        "x": point.x,
+                        "y": point.y,
+                    }
+                    for point in course_points
+                ],
+                "query_point": None
+                if query_point is None
+                else {
+                    "id": query_point.id,
+                    "title": query_point.title,
+                    "description": query_point.description,
+                    "x": query_point.x,
+                    "y": query_point.y,
+                },
+            }
+        },
+    }
+    return results, projection
 
 
 def course_to_dict(course: Course) -> Dict[str, str]:
