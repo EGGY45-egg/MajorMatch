@@ -12,52 +12,6 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 # Collect CSV files if present; callers can use `DATA_DIR` or `COURSE_CSVS`.
 COURSE_CSVS = sorted([p for p in DATA_DIR.glob("*.csv")]) if DATA_DIR.exists() else []
-TOOL_INTENT_KEYWORDS = {
-    "career_track": [
-        "recommend",
-        "recommendation",
-        "career track",
-        "predict",
-        "prediction",
-        "what should i study",
-        "what career",
-    ],
-    "career_context": [
-        "job market",
-        "salary",
-        "salaries",
-        "job count",
-        "jobs",
-        "demand",
-        "market",
-        "practical",
-    ],
-    "course_search": [
-        "course",
-        "courses",
-        "class",
-        "classes",
-        "syllabus",
-        "search",
-        "find me",
-        "learn",
-    ],
-    "visualization": [
-        "visual",
-        "visualize",
-        "map",
-        "scatter",
-        "cluster",
-        "plot",
-        "show me the map",
-        "show the map",
-    ],
-}
-
-
-
-
-
 def recommend_track(features: dict | Sequence[str]) -> Dict[str, object]:
     """
     Recommend a track based on either a features dict (deprecated profile-like dict)
@@ -89,14 +43,19 @@ def suggest_career_context(track: str, location: str = "United States"):
     return get_career_context(track, location=location)
 
 
-def detect_tool_intents(message: str) -> List[str]:
+def should_open_prediction_tool(message: str) -> bool:
+    """Return True when the user is clearly asking for a track prediction."""
     lowered = (message or "").lower()
-    intents: List[str] = []
-    for intent, keywords in TOOL_INTENT_KEYWORDS.items():
-        if any(keyword in lowered for keyword in keywords):
-            intents.append(intent)
-
-    return intents
+    prediction_keywords = (
+        "recommend",
+        "recommendation",
+        "career track",
+        "predict",
+        "prediction",
+        "what should i study",
+        "what career",
+    )
+    return any(keyword in lowered for keyword in prediction_keywords)
 
 
 def build_search_query_from_message(message: str, fallback_track: str) -> str:

@@ -2,8 +2,8 @@ import plotly.express as px
 import streamlit as st
 
 from app_logic import (
-    detect_tool_intents,
     summarize_matches,
+    should_open_prediction_tool,
 )
 from api.ollama import chat_completion, ollama_is_available, resolve_chat_model, chat_completion_stream
 from api.orchestrator import OrchestratorResult, run_orchestrated_assistant
@@ -343,8 +343,6 @@ def main():
                 "content": "I can help you decide what course in college or career to take. Ask me a question and I will answer directly unless a tool is useful.",
             }
         ]
-    # The structured `assistant_profile` concept was removed. Keep prediction
-    # UI state separate and only open the UI when requested by the assistant.
     if "assistant_tools_state" not in st.session_state:
         st.session_state["assistant_tools_state"] = {}
     if "assistant_latest_tool_name" not in st.session_state:
@@ -363,14 +361,12 @@ def main():
     user_message = st.chat_input("Ask a question about majors, careers, courses, or maps...")
     if user_message:
         st.session_state["assistant_messages"].append({"role": "user", "content": user_message})
-        # Clear previous artifacts for the new turn so stale tool panels are not shown
-        # when this request errors or uses different tools.
+        # Clear previous artifacts for the new turn.
         st.session_state["assistant_tools_state"] = {}
         st.session_state["assistant_latest_tool_name"] = ""
         st.session_state["prediction_tool_open"] = False
 
-        intents = detect_tool_intents(user_message)
-        if "career_track" in intents and not any(intent in intents for intent in ("course_search", "career_context", "visualization")):
+        if should_open_prediction_tool(user_message):
             st.session_state["prediction_tool_open"] = True
             st.session_state["assistant_messages"].append(
                 {
@@ -381,9 +377,6 @@ def main():
             st.rerun()
 
         try:
-            # profile_values no longer used; orchestrator no longer accepts a
-            # structured profile argument.
-
             # Prepare a streaming placeholder so assistant output appears chunked
             # in the chat UI as it is generated.
             stream_key = "_streaming_text"
