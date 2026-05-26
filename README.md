@@ -19,27 +19,17 @@ MajorMatch is a chat-first semantic course and career pathfinder for students, a
 
 ## Documentation
 - [Project documentation](docs/PROJECT_DOCUMENTATION.md): consolidated overview of the current architecture, data flow, setup, and implementation notes.
+- [Setup instructions](docs/instruction.md): dedicated local setup guide for Python, PostgreSQL, Ollama, indexing, and validation.
 - [Implementation log](docs/IMPLEMENTATION.md): chronological record of changes and decisions.
 
 ## Setup
-1. Create and activate a virtual environment.
-2. Install dependencies:
+See the full setup guide in [docs/instruction.md](docs/instruction.md).
+
+Quick start:
 
 ```powershell
 pip install -r requirements.txt
-```
-
-3. Set `DATABASE_URL` to your PostgreSQL database.
-4. Set Ollama and embedding env vars if needed.
-5. Build the course index:
-
-```powershell
 python scripts/embed.py
-```
-
-6. Run the app:
-
-```powershell
 streamlit run streamlit_app.py
 ```
 
