@@ -1,13 +1,23 @@
 # MajorMatch
 
-MajorMatch is a semantic course and career pathfinder.
+MajorMatch is a chat-first semantic course and career pathfinder for students, advisors, and freshmen.
 
-Current implementation
-- Chat-first Ollama interview that builds a structured profile.
-- PostgreSQL + pgvector-backed semantic search over the course corpus.
-- PCA, UMAP, and t-SNE course projection plots in the Streamlit UI.
+## What it does
+- Chat assistant that answers normally when it can and uses tools only when useful.
+- Ollama tool-calling orchestrator for career prediction, career context, and semantic course search.
+- Career-track prediction with a local model fallback path.
+- Semantic course search with PCA, UMAP, and t-SNE projections in the Streamlit UI.
+- Latest tool output is shown as a single artifact panel to keep the UI clean.
 
-Setup
+## Current implementation
+- `streamlit_app.py`: chat-first Streamlit app and UI rendering.
+- `api/orchestrator.py`: tool-calling loop and grounded final replies.
+- `api/ollama.py`: Ollama transport, including streaming support.
+- `api/predict.py`: track prediction helper.
+- `api/search.py` and `course_index.py`: semantic search and course projections.
+- `api/jobs.py`: career-context lookup.
+
+## Setup
 1. Create and activate a virtual environment.
 2. Install dependencies:
 
@@ -16,21 +26,35 @@ pip install -r requirements.txt
 ```
 
 3. Set `DATABASE_URL` to your PostgreSQL database.
-4. Build the course index:
+4. Set Ollama and embedding env vars if needed.
+5. Build the course index:
 
 ```powershell
 python scripts/embed.py
 ```
 
-5. Run the app:
+6. Run the app:
 
 ```powershell
 streamlit run streamlit_app.py
 ```
 
-Environment variables
+## Environment variables
 - `DATABASE_URL`: PostgreSQL connection string.
 - `OLLAMA_BASE_URL`: Ollama server URL, defaults to `http://localhost:11434`.
-- `OLLAMA_MODEL`: Chat model name, defaults to `llama3.2:1b`.
+- `OLLAMA_MODEL`: Chat model name, defaults to `llama2:latest` with fallback selection when tools are requested.
 - `EMBEDDING_MODEL`: Sentence-transformer model used for course embeddings.
+- `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`: Optional Adzuna credentials for live career context.
+
+## Tests
+Run the core test suite with:
+
+```powershell
+$env:PYTHONPATH='.'; .\venv\Scripts\python -m pytest tests/test_orchestrator.py -q
+```
+
+## Notes
+- The app uses tool calling automatically for relevant prompts such as salaries, career outlook, predictions, and course search.
+- If `pgvector` is unavailable, the search layer falls back to a portable embedding storage/search path.
+- The Streamlit UI is intentionally minimal and chat-first.
 
