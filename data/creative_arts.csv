@@ -1,5 +1,8 @@
-title,description
-Graphic Design and Typography,Foundations of visual communication, vector illustration, layout hierarchy, color theory, and branding identity utilizing Adobe tools or Figma.
-Digital Photography and Framing,Mastering camera mechanics, manual exposure settings, visual storytelling, lighting setups, and digital photo editing workflows.
-Introduction to Filmmaking,Cinematography basics, scriptwriting, audio capturing techniques, video editing timelines, and directing short visual narratives.
-History of Modern Art,Analyzing global artistic movements from the late 19th century to contemporary spaces, focusing on painting, sculpture, and abstract expressions.
+title,description,tags
+Graphic Design,"A visual arts major centered on layout, typography, branding, illustration, and digital design tools.",graphic-design;typography;branding;layout;visual-communication
+Digital Media Production,"Focuses on image creation, editing, storytelling, and visual composition across photography and digital media.",digital-media;photography;editing;storytelling;composition
+Film Studies,"Examines film history, cinematography, script analysis, editing, and the language of moving images.",film;cinematography;editing;scriptwriting;media
+Art History,"Studies major artistic movements, cultural contexts, visual analysis, and the development of art across eras.",art-history;visual-arts;culture;analysis;history
+Creative Writing,"Builds skills in narrative craft, poetry, fiction, revision, and expressive writing across genres.",writing;storytelling;fiction;poetry;editing
+Animation,"Covers movement, timing, visual storytelling, and digital techniques used in animation and motion graphics.",animation;motion-graphics;storyboarding;digital-media;visual-effects
+Music Production,"Explores recording, mixing, composition, digital audio workflows, and sound design for creative projects.",music;audio;recording;mixing;sound-design

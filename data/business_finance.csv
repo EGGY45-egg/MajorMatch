@@ -1,5 +1,8 @@
-title,description
-Principles of Marketing,Introduction to target audiences, brand strategy, market research, and digital advertising campaigns for corporate or startup environments.
-Financial Accounting,Foundations of tracking business revenue, reading balance sheets, corporate budgeting, and analyzing financial statements.
-Microeconomics,Studying consumer behavior, market supply and demand dynamics, price controls, and how businesses make strategic resource decisions.
-Entrepreneurship and Innovation,A practical guide to business model generation, startup scaling, venture capital basics, and launching new products or services.
+title,description,tags
+Business Administration,"A broad major covering leadership, organizational behavior, strategy, operations, finance, and management for business roles.",management;leadership;strategy;operations;business
+Accounting,"Focuses on financial reporting, auditing, taxation, budgeting, and the systems organizations use to track money.",accounting;finance;auditing;tax;reporting
+Finance,"Covers investments, corporate finance, financial markets, risk management, and capital allocation decisions.",finance;investments;markets;risk;corporate-finance
+Marketing,"Studies consumer behavior, branding, digital promotion, market research, and campaign strategy for products and services.",marketing;branding;consumer-behavior;advertising;research
+Economics,"Examines how individuals, firms, and governments make choices under scarcity using data, models, and policy analysis.",economics;policy;markets;analysis;decision-making
+Supply Chain Management,"Prepares students to manage logistics, procurement, inventory, transportation, and operational efficiency.",supply-chain;logistics;procurement;operations;planning
+Entrepreneurship,"Centers on startup creation, business model design, venture planning, innovation, and launching new ventures.",entrepreneurship;startups;innovation;leadership;venture

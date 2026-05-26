@@ -1,9 +1,9 @@
-title,description
-Introduction to Python,An introduction to Python programming covering syntax, data structures, and basic algorithms. Great for beginners interested in software development and data analysis.
-Data Structures and Algorithms,Core data structures (lists, trees, graphs) and algorithmic problem solving — essential for software engineering roles.
-Machine Learning,Introductory ML concepts including supervised learning, model evaluation, and practical examples using scikit-learn.
-Human-Computer Interaction,Principles of HCI, user research, prototyping, and usability testing — useful for design-oriented careers.
-UX Design Fundamentals,Foundations of user experience, visual design, and wireframing for product designers.
-Databases and SQL,Relational databases, SQL queries, and basic schema design useful for data-focused roles.
-Statistics for Data Science,Probability, statistics, and hypothesis testing foundations for data analysis and ML.
-Web Development with Flask,Building web apps with Flask, REST APIs, and deploying simple services — practical for full-stack learning.
+title,description,tags
+Computer Science,"A foundational major focused on programming, algorithms, systems, software design, and computational thinking.",programming;algorithms;systems;software;computing
+Software Engineering,"Emphasizes building reliable software products, testing, architecture, team development, and delivery practices.",software-engineering;testing;architecture;development;systems
+Data Science,"Combines statistics, programming, machine learning, and data visualization to extract insight from data.",data-science;statistics;machine-learning;analysis;visualization
+Information Systems,"Blends technology and business to design, manage, and support information systems in organizations.",information-systems;business;databases;technology;systems
+Cybersecurity,"Focuses on network defense, secure systems, cryptography, risk assessment, and protecting digital assets.",cybersecurity;security;networks;cryptography;risk
+Human-Computer Interaction,"Studies how people use technology, including usability, research methods, prototyping, and interface design.",hci;ux;design;research;prototyping
+Artificial Intelligence,"Explores machine learning, intelligent systems, natural language processing, and modern AI methods.",ai;machine-learning;automation;models;nlp
+Game Development,"Covers interactive software design, graphics, gameplay systems, and creative programming for games.",game-development;programming;graphics;interactivity;design

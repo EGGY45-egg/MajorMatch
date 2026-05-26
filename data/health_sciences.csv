@@ -1,5 +1,8 @@
-title,description
-Human Anatomy and Physiology,Detailed study of the structure and function of the human body, organ systems, skeletal frameworks, and biological mechanics.
-Introduction to Public Health,Understanding community healthcare systems, disease prevention strategies, global health epidemics, and wellness policy design.
-Foundations of Nutrition,Analyzing dietary needs, human metabolism, macronutrients, vitamins, and how nutrition impacts long-term physical health and athletic performance.
-Medical Ethics and Law,Exploring moral dilemmas in healthcare, patient privacy laws, bioethics, and legal responsibilities of healthcare practitioners.
+title,description,tags
+Biology,"A broad life sciences major covering cells, genetics, physiology, ecology, and the living world.",biology;life-sciences;genetics;ecology;physiology
+Public Health,"Focuses on population wellness, disease prevention, health policy, epidemiology, and community health systems.",public-health;epidemiology;policy;prevention;community-health
+Nutrition Science,"Studies human metabolism, diet, nutrients, and the role of food in health, wellness, and performance.",nutrition;metabolism;wellness;health;diet
+Health Sciences,"A general major that prepares students for healthcare, wellness, research, and related professional pathways.",health-sciences;healthcare;research;wellness;biology
+Kinesiology,"Explores human movement, exercise physiology, biomechanics, and the science of physical activity.",kinesiology;movement;exercise;physiology;biomechanics
+Pre-Physical Therapy,"Designed for students planning to enter physical therapy graduate study, with emphasis on anatomy and movement.",physical-therapy;rehabilitation;anatomy;movement;care
+Athletic Training,"Covers injury prevention, rehabilitation, emergency care, and support for physically active populations.",athletic-training;injury-prevention;rehabilitation;fitness;care

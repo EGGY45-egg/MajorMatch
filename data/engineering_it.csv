@@ -1,5 +1,8 @@
-title,description
-Introduction to Computer Programming,An entry-level guide to software logic, writing algorithms, code syntax, and building basic automated scripts using Python.
-Renewable Energy Systems,Exploring sustainable engineering practices including solar power grid design, wind turbines, and clean energy storage solutions.
-Introduction to Robotics,Combining mechanical engineering and software to program robotic arms, sensors, microcontrollers, and autonomous navigation tracks.
-Cybersecurity Fundamentals,Understanding network infrastructure defense, firewalls, threat detection, encryption methods, and protecting digital assets from hackers.
+title,description,tags
+Electrical Engineering,"A hardware-focused major covering circuits, signals, electronics, control systems, and power applications.",electrical-engineering;circuits;electronics;signals;hardware
+Mechanical Engineering,"Studies mechanics, materials, thermodynamics, and the design of machines, systems, and physical products.",mechanical-engineering;mechanics;materials;design;systems
+Civil Engineering,"Prepares students to design and maintain infrastructure such as roads, buildings, water systems, and bridges.",civil-engineering;infrastructure;structures;design;planning
+Computer Engineering,"Bridges hardware and software through embedded systems, digital logic, computing architecture, and device design.",computer-engineering;embedded-systems;hardware;software;logic
+Industrial Engineering,"Focuses on process optimization, systems efficiency, operations research, quality improvement, and workflow design.",industrial-engineering;operations;optimization;quality;systems
+Information Technology,"Covers technical support, networking, systems administration, cloud tools, and practical business technology management.",it;networking;systems;cloud;support
+Robotics Engineering,"Combines mechanics, electronics, sensors, and programming to design autonomous and intelligent machines.",robotics;automation;sensors;programming;mechatronics

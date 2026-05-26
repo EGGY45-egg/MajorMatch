@@ -1,5 +1,8 @@
-title,description
-Introduction to Psychology,Exploring human behavior, mental processes, cognitive development, personality traits, and psychological research methods.
-World History and Global Cultures,A comprehensive review of major historical civilizations, geopolitical shifts, cultural evolutions, and international trade networks.
-Sociology of Digital Media,Examining how social media networks, online communities, algorithms, and digital spaces shape modern human interaction and culture.
-Creative Writing Workshop,Developing foundational skills in narrative structuring, character development, world-building, and editing prose across multiple literary genres.
+title,description,tags
+Psychology,"A social science major focused on behavior, cognition, mental processes, and human development.",psychology;behavior;cognition;research;development
+Sociology,"Studies groups, institutions, culture, inequality, and how social structures shape human life.",sociology;society;culture;inequality;institutions
+Political Science,"Examines government systems, political behavior, public policy, international relations, and civic power.",political-science;government;policy;international-relations;civics
+History,"Explores past events, societies, movements, and the forces that shaped the modern world.",history;civilizations;culture;analysis;time
+Anthropology,"Focuses on human societies, cultures, evolution, and the study of people across time and place.",anthropology;culture;humanity;society;research
+Education Studies,"Prepares students to understand learning, teaching, curriculum, and the systems that support education.",education;teaching;curriculum;learning;instruction
+Criminology,"Analyzes crime, justice systems, law enforcement, and social factors related to public safety.",criminology;justice;crime;law;public-safety
