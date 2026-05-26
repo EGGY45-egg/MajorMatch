@@ -15,7 +15,7 @@ from app_logic import (
 
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama2:latest")
 PREFERRED_CHAT_MODELS = (
     "llama3.2:1b",
     "llama3.2",

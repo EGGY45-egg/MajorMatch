@@ -282,6 +282,16 @@ Files changed:
 Summary: Make the normal AI response more user-friendly when no tools are invoked
 Details: Added explicit no-tool instructions for greetings, identity questions, and other normal chat so the assistant responds directly instead of invoking tools. Updated the Streamlit welcome copy to introduce MajorMatch in plain language and added a test that locks the no-tool path for casual questions.
 
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Added a friendly identity reply for common self-introduction questions
+Details: The orchestrator now detects common user questions about the assistant's identity (e.g., "who are you?", "introduce yourself") and responds with a friendly introduction instead of a generic greeting. This adds a bit of personality to the assistant and makes the chat feel more engaging. Updated the test to expect the new identity reply when those questions are asked.
+
 Notes
 -----
 

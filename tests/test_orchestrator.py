@@ -169,15 +169,44 @@ def test_career_context_prompt_requests_exact_tool_fields():
 
 
 def test_normal_question_does_not_need_tools():
-    def fake_chat_fn(messages, model=None, tools=None, options=None):
-        return {"message": {"content": "I am MajorMatch, an AI assistant that can help with college courses and careers.", "tool_calls": []}}
-
     result = orchestrator.run_orchestrated_assistant(
         "hello, what are you?",
+        {"coding": 5, "math": 5, "design": 5},
+        model="test-model",
+    )
+
+    assert result.reply == "I am MajorMatch, an AI assistant that helps you choose courses and career paths. I can answer questions directly, and I’ll use tools only when they add value."
+    assert result.tool_trace == []
+
+
+def test_assistant_header_tokens_are_stripped_from_final_reply():
+    def fake_chat_fn(messages, model=None, tools=None, options=None):
+        return {"message": {"content": "<|start_header_id|>assistant<|end_header_id|> Hi there.", "tool_calls": []}}
+
+    result = orchestrator.run_orchestrated_assistant(
+        "recommend a course path",
         {"coding": 5, "math": 5, "design": 5},
         model="test-model",
         chat_fn=fake_chat_fn,
     )
 
-    assert result.reply == "I am MajorMatch, an AI assistant that can help with college courses and careers."
+    assert result.reply == "Hi there."
+
+
+def test_identity_question_skips_tools_entirely():
+    calls = []
+
+    def fake_chat_fn(messages, model=None, tools=None, options=None):
+        calls.append({"messages": messages, "tools": tools})
+        return {"message": {"content": "This should not be used.", "tool_calls": []}}
+
+    result = orchestrator.run_orchestrated_assistant(
+        "what are you?",
+        {"coding": 5, "math": 5, "design": 5},
+        model="test-model",
+        chat_fn=fake_chat_fn,
+    )
+
     assert result.tool_trace == []
+    assert calls == []
+    assert result.reply.startswith("I am MajorMatch")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -10,6 +11,51 @@ from api.ollama import chat_completion, resolve_chat_model
 
 
 ToolCallable = Callable[[List[Dict[str, str]], Optional[str]], Dict[str, Any]]
+
+
+def _clean_assistant_text(text: str) -> str:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+
+    markers = [
+        r"<\|start_header_id\|>assistant<\|end_header_id\|>",
+        r"<\|start_header_id\|>assistant<\|end_header_id\|>\s*",
+        r"<\|start_header_id\|>",
+        r"<\|end_header_id\|>",
+    ]
+    for marker in markers:
+        cleaned = re.sub(marker, "", cleaned, flags=re.IGNORECASE)
+
+    cleaned = re.sub(r"^assistant\s*[:\-]\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    return cleaned
+
+
+def _is_normal_chat_question(user_message: str) -> bool:
+    lowered = (user_message or "").strip().lower()
+    if not lowered:
+        return True
+
+    greeting_patterns = [
+        r"^(hi|hello|hey|yo|sup)[\W_]*$",
+        r"^(hi|hello|hey|yo|sup)\b",
+        r"what are you\??$",
+        r"who are you\??$",
+        r"tell me about yourself\??$",
+        r"introduce yourself\??$",
+    ]
+    for pattern in greeting_patterns:
+        if re.search(pattern, lowered):
+            return True
+    return False
+
+
+def _friendly_identity_reply() -> str:
+    return (
+        "I am MajorMatch, an AI assistant that helps you choose courses and career paths. "
+        "I can answer questions directly, and I’ll use tools only when they add value."
+    )
 
 
 @dataclass(frozen=True)
@@ -242,6 +288,15 @@ def run_orchestrated_assistant(
     profile = coerce_profile_values(current_profile)
     resolved_model = resolve_chat_model(model)
 
+    if _is_normal_chat_question(user_message):
+        return OrchestratorResult(
+            reply=_friendly_identity_reply() if re.search(r"\b(what are you|who are you|tell me about yourself|introduce yourself)\b", user_message.lower()) else "Hello. I am MajorMatch, an AI assistant that helps with courses and careers.",
+            profile=profile,
+            artifacts={},
+            tool_trace=[],
+            raw="",
+        )
+
     system_prompt = (
         "You are MajorMatch's orchestrator. Use tools automatically whenever they are relevant. "
         "Do not call tools for greetings, introductions, identity questions, or other normal chat. "
@@ -293,7 +348,7 @@ def run_orchestrated_assistant(
                     options={"temperature": 0.2},
                 )
                 final_message = final_response.get("message", {}) if isinstance(final_response, dict) else {}
-                final_content = str(final_message.get("content", "") or "").strip()
+                final_content = _clean_assistant_text(str(final_message.get("content", "") or ""))
                 if final_content:
                     raw = json.dumps(final_response)
                     return OrchestratorResult(
@@ -304,7 +359,7 @@ def run_orchestrated_assistant(
                         raw=raw,
                     )
             return OrchestratorResult(
-                reply=last_content or "I could not generate a response.",
+                reply=_clean_assistant_text(last_content) or "I could not generate a response.",
                 profile=profile,
                 artifacts=artifacts,
                 tool_trace=trace,
