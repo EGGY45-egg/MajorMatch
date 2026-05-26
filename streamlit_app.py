@@ -6,7 +6,7 @@ from app_logic import (
     detect_tool_intents,
     summarize_matches,
 )
-from api.ollama import chat_completion, ollama_is_available, resolve_chat_model
+from api.ollama import chat_completion, ollama_is_available, resolve_chat_model, chat_completion_stream
 from api.orchestrator import OrchestratorResult, run_orchestrated_assistant
 from api.predict import get_prediction_feature_columns, predict_track
 from api.search import CourseIndexError, rebuild_index
@@ -291,14 +291,32 @@ def main():
 
         try:
             profile_values = st.session_state["assistant_profile"]
+
+            # Prepare a streaming placeholder so assistant output appears chunked
+            # in the chat UI as it is generated.
+            stream_key = "_streaming_text"
+            st.session_state[stream_key] = ""
+            with st.chat_message("assistant"):
+                placeholder = st.empty()
+
+            def _on_chunk(chunk: str) -> None:
+                # Append the incoming chunk and update the placeholder
+                current = st.session_state.get(stream_key, "") or ""
+                current += str(chunk)
+                st.session_state[stream_key] = current
+                placeholder.markdown(current)
+
             result = run_orchestrated_assistant(
                 user_message,
                 profile_values,
                 location="United States",
                 model=resolved_model,
                 conversation_history=st.session_state["assistant_messages"],
+                stream_chat_fn=chat_completion_stream,
+                on_stream_chunk=_on_chunk,
             )
 
+            # Finalize UI state once streaming completes
             st.session_state["assistant_profile"] = result.profile
             st.session_state["assistant_tools_state"] = result.artifacts
             latest_tool_name = ""
@@ -326,6 +344,8 @@ def main():
 
             assistant_reply = result.reply or "I am MajorMatch, an AI assistant that can help you decide what course in college or career to take."
             st.session_state["assistant_messages"].append({"role": "assistant", "content": assistant_reply})
+            # Clear streaming buffer
+            st.session_state.pop(stream_key, None)
         except Exception as error:
             st.session_state["assistant_tools_state"] = {}
             st.session_state["assistant_latest_tool_name"] = ""

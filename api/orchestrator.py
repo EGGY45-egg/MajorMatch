@@ -309,6 +309,9 @@ def run_orchestrated_assistant(
     conversation_history: Optional[List[Dict[str, str]]] = None,
     max_steps: int = 4,
     chat_fn: Callable[..., Dict[str, Any]] = chat_completion,
+    # Optional streaming hook: a stream-capable chat function and a chunk callback.
+    stream_chat_fn: Optional[Callable[..., Any]] = None,
+    on_stream_chunk: Optional[Callable[[str], None]] = None,
 ) -> OrchestratorResult:
     profile = coerce_profile_values(current_profile)
     resolved_model = resolve_chat_model(model)

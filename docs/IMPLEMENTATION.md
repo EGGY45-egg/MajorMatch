@@ -386,6 +386,15 @@ Files changed:
 Summary: Cache the course corpus and remove duplicate semantic-search embedding work
 Details: Added in-memory caching for the loaded course corpus and introduced a combined search-plus-projection helper so each semantic-search request reuses one corpus load and one query embedding pass. Updated the orchestrator to call the combined helper instead of running separate search and projection passes, and adjusted the orchestrator test to stub the new fast path. Verified the optimization with the full test suite (14 passed).
 
+Date: 2026-05-26
+Author: RV
+Area: Backend / UX / Docs
+Files changed:
+- api/ollama.py
+- api/orchestrator.py
+- streamlit_app.py
+Summary: Add chunked streaming for assistant replies and Streamlit integration
+Details: Implemented `chat_completion_stream()` in `api/ollama.py` to POST with `stream=True` and yield incremental text chunks. Updated `api/orchestrator.py` to accept a `stream_chat_fn` and `on_stream_chunk` callback so the final assistant reply can be streamed when available. Integrated streaming into `streamlit_app.py` by adding a placeholder chat message and a chunk handler that updates the UI incrementally as chunks arrive. Verified with the test suite (14 passed) and manual runs against the local Ollama instance.
 
 Notes
 -----

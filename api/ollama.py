@@ -99,6 +99,59 @@ def _post_json(url: str, payload: Dict[str, object]) -> Dict[str, object]:
         raise RuntimeError(f"HTTP {he.code} {he.reason}: {body}") from he
 
 
+def chat_completion_stream(
+    messages: List[Dict[str, str]],
+    model: Optional[str] = None,
+    *,
+    tools: Optional[List[Dict[str, Any]]] = None,
+    options: Optional[Dict[str, Any]] = None,
+    base_url: str = OLLAMA_BASE_URL,
+):
+    """Create a streaming chat completion generator that yields text chunks.
+
+    This performs a POST with `stream=True` and yields bytes as decoded
+    UTF-8 fragments. Consumers should provide a callback to consume chunks
+    and assemble the final assistant reply.
+    """
+    resolved_model = resolve_chat_model(model, base_url)
+    payload: Dict[str, Any] = {
+        "model": resolved_model,
+        "messages": messages,
+        "stream": True,
+    }
+    if tools:
+        payload["tools"] = tools
+    if options:
+        payload["options"] = options
+
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        f"{base_url}/api/chat",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=OLLAMA_REQUEST_TIMEOUT_SECONDS) as response:
+            # Read in small chunks and yield decoded text as it arrives.
+            while True:
+                chunk = response.read(1024)
+                if not chunk:
+                    break
+                try:
+                    text = chunk.decode("utf-8")
+                except Exception:
+                    text = chunk.decode("utf-8", errors="ignore")
+                yield text
+    except urllib.error.HTTPError as he:
+        try:
+            body = he.read().decode("utf-8")
+        except Exception:
+            body = "<unable to read response body>"
+        raise RuntimeError(f"HTTP {he.code} {he.reason}: {body}") from he
+
+
 def chat_completion(
     messages: List[Dict[str, str]],
     model: Optional[str] = None,
