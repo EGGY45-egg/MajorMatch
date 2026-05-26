@@ -213,6 +213,35 @@ def _extract_tool_calls(message: Dict[str, Any]) -> List[Dict[str, Any]]:
     return normalized
 
 
+def _try_extract_tool_call_from_content(message: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Some models return a tool invocation as raw JSON in the assistant
+    content (e.g. {"name":"get_career_context","parameters":[{...}]}).
+    Try to parse and normalize that into a tool call so the orchestrator
+    executes it rather than surfacing raw JSON to the user.
+    """
+    content = (message.get("content") or "").strip()
+    if not content or not content.lstrip().startswith("{"):
+        return []
+    try:
+        parsed = json.loads(content)
+    except Exception:
+        return []
+
+    calls: List[Dict[str, Any]] = []
+    # Support either a single dict or a list of dicts
+    items = [parsed] if isinstance(parsed, dict) else parsed if isinstance(parsed, list) else []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not name:
+            continue
+        # arguments may be under 'parameters' or 'arguments'
+        arguments = item.get("parameters") or item.get("arguments") or {}
+        calls.append({"id": None, "type": "function", "name": name, "arguments": _parse_tool_arguments(arguments)})
+    return calls
+
+
 def _execute_tool(name: str, arguments: Dict[str, Any], location: str) -> Dict[str, Any]:
     if name == "predict_track":
         # Disallow implicit profile-based predictions. The prediction tool must
@@ -364,6 +393,11 @@ def run_orchestrated_assistant(
         message = response.get("message", {}) if isinstance(response, dict) else {}
         last_content = str(message.get("content", "") or "").strip()
         tool_calls = _extract_tool_calls(message)
+        # If the model printed a JSON tool invocation into the assistant
+        # content instead of using the `tool_calls` structure, try to recover
+        # it and treat it as a proper tool call.
+        if not tool_calls:
+            tool_calls = _try_extract_tool_call_from_content(message)
 
         if not tool_calls:
             if trace:
