@@ -254,6 +254,24 @@ def test_app_intro_question_skips_tools_entirely():
     assert result.reply == "Hello. I am MajorMatch, an AI assistant that helps with courses and careers."
 
 
+def test_gratitude_message_skips_tools_entirely():
+    calls = []
+
+    def fake_chat_fn(messages, model=None, tools=None, options=None):
+        calls.append({"messages": messages, "tools": tools})
+        return {"message": {"content": "This should not be used.", "tool_calls": []}}
+
+    result = orchestrator.run_orchestrated_assistant(
+        "Thank you for the help.",
+        model="test-model",
+        chat_fn=fake_chat_fn,
+    )
+
+    assert result.tool_trace == []
+    assert calls == []
+    assert result.reply == "You're welcome. If you want to explore another major or career path, I can help with that too."
+
+
 def test_streamed_final_reply_preserves_spaces(monkeypatch):
     monkeypatch.setattr(
         orchestrator,

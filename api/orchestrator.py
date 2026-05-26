@@ -47,6 +47,8 @@ def _is_normal_chat_question(user_message: str) -> bool:
         r"who are you\??$",
         r"tell me about yourself\??$",
         r"introduce yourself\??$",
+        r"^(thanks|thank you|thx|appreciate it|that's all|that is all)[\W_]*$",
+        r"\bthank(s| you| you very much|s a lot)?\b",
     ]
     for pattern in greeting_patterns:
         if re.search(pattern, lowered):
@@ -59,6 +61,10 @@ def _friendly_identity_reply() -> str:
         "I am MajorMatch, an AI assistant that helps you choose courses and career paths. "
         "I can answer questions directly, and I’ll use tools only when they add value."
     )
+
+
+def _friendly_gratitude_reply() -> str:
+    return "You're welcome. If you want to explore another major or career path, I can help with that too."
 
 
 @dataclass(frozen=True)
@@ -349,8 +355,15 @@ def run_orchestrated_assistant(
     resolved_model = resolve_chat_model(model)
 
     if _is_normal_chat_question(user_message):
+        lowered = user_message.lower()
         return OrchestratorResult(
-            reply=_friendly_identity_reply() if re.search(r"\b(what are you|who are you|tell me about yourself|introduce yourself)\b", user_message.lower()) else "Hello. I am MajorMatch, an AI assistant that helps with courses and careers.",
+            reply=(
+                _friendly_identity_reply()
+                if re.search(r"\b(what are you|who are you|tell me about yourself|introduce yourself)\b", lowered)
+                else _friendly_gratitude_reply()
+                if re.search(r"\b(thanks|thank you|thx|appreciate it|that's all|that is all)\b", lowered)
+                else "Hello. I am MajorMatch, an AI assistant that helps with courses and careers."
+            ),
             artifacts={},
             tool_trace=[],
             raw="",
@@ -359,6 +372,7 @@ def run_orchestrated_assistant(
     system_prompt = (
         "You are MajorMatch's orchestrator. Use tools automatically whenever they are relevant. "
         "Do not call tools for greetings, introductions, identity questions, or other normal chat. "
+        "Do not call tools for gratitude, acknowledgements, or wrap-up messages. "
         "If the user asks what you are or says hello, answer directly with a friendly plain-language introduction. "
         "Call predict_track when the user's profile or skill fit needs a recommendation. "
         "Call get_career_context when the user asks about market demand, salary, or career outlook. "
