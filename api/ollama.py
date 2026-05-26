@@ -1,13 +1,8 @@
 import json
 import os
-import re
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-
-# profile-related helpers were removed from `app_logic.py` when the
-# structured profile concept was removed; this module no longer imports them.
 
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -20,14 +15,6 @@ PREFERRED_CHAT_MODELS = (
     "llama3.1",
     "llama2",
 )
-
-
-@dataclass(frozen=True)
-class OllamaInterviewResult:
-    reply: str
-    complete: bool
-    raw: str = ""
-
 
 def ollama_is_available(base_url: str = OLLAMA_BASE_URL) -> bool:
     try:
@@ -198,132 +185,3 @@ def chat_completion(
     return _post_json(f"{base_url}/api/chat", payload)
 
 
-def _extract_json_object(text: str) -> Optional[Dict[str, object]]:
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
-        if not match:
-            return None
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
-
-
-def _latest_user_message(messages: List[Dict[str, str]]) -> str:
-    for message in reversed(messages):
-        if message.get("role") == "user":
-            return str(message.get("content", ""))
-    return ""
-
-
-def _infer_score_from_text(text: str, field: str, current_score: int) -> int:
-    lowered = text.lower()
-    field_terms = {
-        "coding": ["coding", "code", "programming", "developer", "software", "apps", "debug", "logic"],
-        "math": ["math", "maths", "algebra", "statistics", "stats", "data", "numbers", "equations"],
-        "design": ["design", "drawing", "drawing", "ux", "ui", "visual", "art", "creative", "graphics"],
-    }
-
-    strong_terms = ["good at", "strong at", "best at", "love", "really good", "very good", "enjoy"]
-    weak_terms = ["not good at", "not so good", "bad at", "weak at", "struggle with", "hate", "poor at"]
-    neutral_terms = ["okay with", "fine with", "comfortable with", "average at", "somewhat"]
-
-    score = current_score
-    if any(term in lowered for term in field_terms.get(field, [])):
-        score += 2
-
-    if any(term in lowered for term in strong_terms):
-        score += 2
-    if any(term in lowered for term in weak_terms):
-        score -= 2
-    if any(term in lowered for term in neutral_terms):
-        score += 1
-
-    if field == "coding" and any(term in lowered for term in ["coding", "code", "programming", "developer", "software", "apps", "debug", "logic"]):
-        if any(term in lowered for term in strong_terms):
-            score += 3
-        elif any(term in lowered for term in weak_terms):
-            score -= 3
-    if field == "math" and any(term in lowered for term in ["math", "statistics", "stats", "data", "numbers", "equations"]):
-        if any(term in lowered for term in strong_terms):
-            score += 3
-        elif any(term in lowered for term in weak_terms):
-            score -= 3
-    if field == "design" and any(term in lowered for term in ["design", "drawing", "ux", "ui", "visual", "art", "creative", "graphics"]):
-        if any(term in lowered for term in strong_terms):
-            score += 3
-        elif any(term in lowered for term in weak_terms):
-            score -= 3
-
-    return max(0, min(10, score))
-
-
-def _infer_profile_from_text(text: str, current_profile: Dict[str, int]) -> Dict[str, int]:
-    updated = coerce_profile_values(current_profile)
-    if not text.strip():
-        return updated
-
-    for field in ("coding", "math", "design"):
-        updated[field] = _infer_score_from_text(text, field, updated[field])
-
-    if "not good at drawing" in text.lower() or "not so good at drawing" in text.lower():
-        updated["design"] = min(updated["design"], 2)
-    if "good at coding" in text.lower() or "best at coding" in text.lower():
-        updated["coding"] = max(updated["coding"], 8)
-    if "good at math" in text.lower() or "also good at math" in text.lower():
-        updated["math"] = max(updated["math"], 8)
-
-    return updated
-
-
-def interview_profile(
-    messages: List[Dict[str, str]],
-    model: str = OLLAMA_MODEL,
-) -> OllamaInterviewResult:
-    if not ollama_is_available():
-        raise ConnectionError(f"Ollama is not reachable at {OLLAMA_BASE_URL}")
-
-    system_prompt = (
-        "You are MajorMatch, a concise interview assistant for students. "
-        "Have a natural conversation with the user and ask one short follow-up question at a time. "
-        "Use the conversation to estimate or update a profile with coding, math, and design scores from 0 to 10. "
-        "Reply in plain text. Do not emit code fences or JSON unless the user explicitly asks for it. "
-        "If the user already provided enough information, briefly acknowledge that and say you can make a recommendation now."
-    )
-
-    payload_messages = [{"role": "system", "content": system_prompt}]
-    payload_messages.extend(messages)
-    # Do not include the user's structured profile in the system prompt to
-    # avoid the assistant making assumptions or referencing profile values
-    # inferred from previous messages. The interview should rely on explicit
-    # structured `profile` updates returned by the model or user inputs.
-
-    try:
-        response = chat_completion(payload_messages, model=model, options={"temperature": 0.2})
-        content = response.get("message", {}).get("content", "")
-        parsed = _extract_json_object(content)
-
-        reply = content.strip()
-        if parsed and isinstance(parsed.get("reply"), str):
-            reply = str(parsed.get("reply", reply)).strip()
-
-        if not reply or reply in {"{", "}", "{}"}:
-            raise ValueError(f"Ollama returned unusable reply: {content!r}")
-
-        if parsed and "complete" in parsed:
-            complete = bool(parsed.get("complete", False))
-        else:
-            complete = False
-        return OllamaInterviewResult(
-            reply=reply,
-            complete=complete,
-            raw=content,
-        )
-    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
-        raise
