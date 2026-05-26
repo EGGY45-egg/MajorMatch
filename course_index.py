@@ -367,59 +367,62 @@ def search_courses_with_projection(query: str, top_k: int = 5, method: str = "pc
     """
     if not query.strip():
         results = list_courses(limit=top_k)
-        return results, {"available": False, "method": method, "courses": [], "query_point": None, "methods": {}}
+        return results, {
+            "available": False,
+            "method": method,
+            "courses": [],
+            "query_point": None,
+            "methods": {},
+        }
 
     ensure_database()
     results, query_embedding, courses = _rank_courses(query, top_k)
     _, embeddings = _cached_course_dataset()
-    course_points, query_point = _project_courses_with_embedding(courses, embeddings, query_embedding, query, method)
+    methods = {}
+    for projection_method in ("pca", "umap", "tsne"):
+        course_points, query_point = _project_courses_with_embedding(
+            courses,
+            embeddings,
+            query_embedding,
+            query,
+            projection_method,
+        )
+        methods[projection_method] = {
+            "available": True,
+            "method": projection_method,
+            "courses": [
+                {
+                    "id": point.id,
+                    "title": point.title,
+                    "description": point.description,
+                    "x": point.x,
+                    "y": point.y,
+                }
+                for point in course_points
+            ],
+            "query_point": None
+            if query_point is None
+            else {
+                "id": query_point.id,
+                "title": query_point.title,
+                "description": query_point.description,
+                "x": query_point.x,
+                "y": query_point.y,
+            },
+        }
+
+    selected_projection = methods.get(method) or methods.get("pca") or {
+        "available": False,
+        "method": method,
+        "courses": [],
+        "query_point": None,
+    }
     projection = {
         "available": True,
-        "method": method,
-        "courses": [
-            {
-                "id": point.id,
-                "title": point.title,
-                "description": point.description,
-                "x": point.x,
-                "y": point.y,
-            }
-            for point in course_points
-        ],
-        "query_point": None
-        if query_point is None
-        else {
-            "id": query_point.id,
-            "title": query_point.title,
-            "description": query_point.description,
-            "x": query_point.x,
-            "y": query_point.y,
-        },
-        "methods": {
-            method: {
-                "available": True,
-                "method": method,
-                "courses": [
-                    {
-                        "id": point.id,
-                        "title": point.title,
-                        "description": point.description,
-                        "x": point.x,
-                        "y": point.y,
-                    }
-                    for point in course_points
-                ],
-                "query_point": None
-                if query_point is None
-                else {
-                    "id": query_point.id,
-                    "title": query_point.title,
-                    "description": query_point.description,
-                    "x": query_point.x,
-                    "y": query_point.y,
-                },
-            }
-        },
+        "method": selected_projection["method"],
+        "courses": selected_projection["courses"],
+        "query_point": selected_projection["query_point"],
+        "methods": methods,
     }
     return results, projection
 
