@@ -5,7 +5,7 @@ MajorMatch is a chat-first semantic course and career pathfinder for students, a
 ## What it does
 - Chat assistant that answers normally when it can and uses tools only when useful.
 - Ollama tool-calling orchestrator for career prediction, career context, and semantic course search.
-- Career-track prediction with a local model fallback path.
+ - Career-track prediction that accepts `selected_features` (model feature names). The front-end can open an interactive prediction UI when requested; a lightweight fallback remains optional.
 - Semantic course search with PCA, UMAP, and t-SNE projections in the Streamlit UI.
 - Latest tool output is shown as a single artifact panel to keep the UI clean.
 
@@ -13,7 +13,7 @@ MajorMatch is a chat-first semantic course and career pathfinder for students, a
 - `streamlit_app.py`: chat-first Streamlit app and UI rendering.
 - `api/orchestrator.py`: tool-calling loop and grounded final replies.
 - `api/ollama.py`: Ollama transport, including streaming support.
-- `api/predict.py`: track prediction helper.
+- `api/predict.py`: track prediction helper. The predictor expects `selected_features` (an array of feature names) or a sequence of selected features; it exposes a `use_fallback` flag to control rule-based fallbacks.
 - `api/search.py` and `course_index.py`: semantic search and course projections.
 - `api/jobs.py`: career-context lookup.
 
@@ -48,7 +48,7 @@ $env:PYTHONPATH='.'; .\venv\Scripts\python -m pytest tests/test_orchestrator.py 
 ```
 
 ## Notes
-- The app uses tool calling automatically for relevant prompts such as salaries, career outlook, predictions, and course search.
+- The app uses tool calling automatically for relevant prompts such as salaries, career outlook, predictions, and course search. Structured user "profiles" have been removed — predictions are driven from selected model feature names or the interactive prediction UI.
 - If `pgvector` is unavailable, the search layer falls back to a portable embedding storage/search path.
 - The Streamlit UI is intentionally minimal and chat-first.
 
