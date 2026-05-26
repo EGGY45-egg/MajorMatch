@@ -188,6 +188,120 @@ def _render_semantic_search(search_artifact):
             st.write(course.get("description", "No description available."))
 
 
+def _render_hero_section(ollama_ready: bool, resolved_model: str) -> None:
+    st.markdown(
+        """
+        <style>
+            .mm-hero {
+                padding: 1.4rem 1.5rem;
+                border-radius: 1.1rem;
+                background: linear-gradient(135deg, rgba(18, 24, 38, 0.92), rgba(15, 23, 42, 0.78));
+                border: 1px solid rgba(148, 163, 184, 0.16);
+                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+            }
+            .mm-hero-kicker {
+                text-transform: uppercase;
+                letter-spacing: 0.14em;
+                font-size: 0.72rem;
+                color: rgba(148, 163, 184, 0.9);
+                margin-bottom: 0.6rem;
+            }
+            .mm-hero-title {
+                font-size: 2.2rem;
+                line-height: 1.05;
+                font-weight: 800;
+                margin-bottom: 0.55rem;
+            }
+            .mm-hero-copy {
+                color: rgba(226, 232, 240, 0.9);
+                font-size: 1rem;
+                line-height: 1.6;
+                max-width: 58ch;
+                margin-bottom: 1rem;
+            }
+            .mm-pill-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .mm-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.45rem 0.75rem;
+                border-radius: 999px;
+                background: rgba(30, 41, 59, 0.9);
+                color: rgba(241, 245, 249, 0.95);
+                font-size: 0.88rem;
+                border: 1px solid rgba(148, 163, 184, 0.16);
+            }
+            .mm-status-card {
+                padding: 1.1rem 1.15rem;
+                border-radius: 1rem;
+                background: rgba(15, 23, 42, 0.72);
+                border: 1px solid rgba(148, 163, 184, 0.16);
+                height: 100%;
+            }
+            .mm-status-label {
+                font-size: 0.78rem;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+                color: rgba(148, 163, 184, 0.9);
+                margin-bottom: 0.45rem;
+            }
+            .mm-status-value {
+                font-size: 1.02rem;
+                font-weight: 700;
+                margin-bottom: 0.6rem;
+            }
+            .mm-status-note {
+                color: rgba(226, 232, 240, 0.85);
+                font-size: 0.9rem;
+                line-height: 1.5;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    hero_left, hero_right = st.columns([1.7, 1])
+    with hero_left:
+        st.markdown(
+            """
+            <div class="mm-hero">
+                <div class="mm-hero-kicker">AI course and career explorer</div>
+                <div class="mm-hero-title">Helping students pick a path with less guesswork.</div>
+                <div class="mm-hero-copy">
+                    Ask about majors, careers, salaries, or courses. The assistant responds normally when it can,
+                    and uses tools only when a grounded answer will help.
+                </div>
+                <div class="mm-pill-row">
+                    <span class="mm-pill">Chat-first</span>
+                    <span class="mm-pill">Tool-grounded replies</span>
+                    <span class="mm-pill">Semantic course search</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with hero_right:
+        status_text = "Connected locally" if ollama_ready else "Not connected"
+        status_badge = "Ready" if ollama_ready else "Offline"
+        st.markdown(
+            f"""
+            <div class="mm-status-card">
+                <div class="mm-status-label">Live status</div>
+                <div class="mm-status-value">{status_text}</div>
+                <div class="mm-status-note">
+                    <strong>Model:</strong> {resolved_model}<br/>
+                    <strong>Mode:</strong> {status_badge}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
 def _render_tool_output(result: OrchestratorResult):
     latest_tool_name = result.artifacts.get("latest_tool_name")
     if latest_tool_name == "predict_track" and result.artifacts.get("prediction"):
@@ -216,31 +330,9 @@ def main():
     st.title("MajorMatch")
     st.caption("A semantic course and career pathfinder for students, advisors, and freshmen.")
 
-    st.write(
-        "The assistant chooses tools automatically when they are relevant and keeps the reply grounded in the result."
-    )
-
-    col_status_left, col_status_right = st.columns([1, 1])
-    with col_status_left:
-        ollama_ready = ollama_is_available()
-        if ollama_ready:
-            st.success("Ollama is available locally.")
-        else:
-            st.error("Ollama is not reachable. Start Ollama before using chat.")
-    with col_status_right:
-        resolved_model = resolve_chat_model()
-        st.caption(f"Chat model in use: {resolved_model}")
-
-    with st.expander("Maintenance", expanded=False):
-        if st.button("Build / refresh course index from CSV"):
-            try:
-                with st.spinner("Embedding courses and writing them to PostgreSQL..."):
-                    indexed_count = rebuild_index()
-                st.success(f"Indexed {indexed_count} courses.")
-            except CourseIndexError as error:
-                st.error(str(error))
-            except Exception as error:
-                st.exception(error)
+    ollama_ready = ollama_is_available()
+    resolved_model = resolve_chat_model()
+    _render_hero_section(ollama_ready, resolved_model)
 
     st.subheader("Chat Assistant")
     st.caption("Ask naturally. Normal questions get a direct friendly reply; tools are used only when needed.")
@@ -249,7 +341,7 @@ def main():
         st.session_state["assistant_messages"] = [
             {
                 "role": "assistant",
-                "content": "I am MajorMatch, an AI assistant that can help you decide what course in college or career to take. Ask me a question and I will answer directly unless a tool is useful.",
+                "content": "I can help you decide what course in college or career to take. Ask me a question and I will answer directly unless a tool is useful.",
             }
         ]
     if "assistant_profile" not in st.session_state:
