@@ -140,13 +140,13 @@ def main():
                 st.exception(error)
 
     st.subheader("Chat Assistant")
-    st.caption("Ask naturally. The assistant will decide when to use tools.")
+    st.caption("Ask naturally. Normal questions get a direct friendly reply; tools are used only when needed.")
 
     if "assistant_messages" not in st.session_state:
         st.session_state["assistant_messages"] = [
             {
                 "role": "assistant",
-                "content": "Hi, I am MajorMatch. Ask me anything about careers, salary context, or courses, and I will use tools when needed.",
+                "content": "I am MajorMatch, an AI assistant that can help you decide what course in college or career to take. Ask me a question and I will answer directly unless a tool is useful.",
             }
         ]
     if "assistant_profile" not in st.session_state:
@@ -158,7 +158,7 @@ def main():
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    user_message = st.chat_input("Ask anything about your major, careers, courses, or maps...")
+    user_message = st.chat_input("Ask a question about majors, careers, courses, or maps...")
     if user_message:
         st.session_state["assistant_messages"].append({"role": "user", "content": user_message})
 
@@ -175,7 +175,7 @@ def main():
             st.session_state["assistant_profile"] = result.profile
             st.session_state["assistant_tools_state"] = result.artifacts
 
-            assistant_reply = result.reply or "I can help with career recommendations, job context, and course exploration."
+            assistant_reply = result.reply or "I am MajorMatch, an AI assistant that can help you decide what course in college or career to take."
             st.session_state["assistant_messages"].append({"role": "assistant", "content": assistant_reply})
         except Exception as error:
             st.session_state["assistant_messages"].append(

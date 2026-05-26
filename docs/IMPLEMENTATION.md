@@ -272,6 +272,15 @@ Files changed:
 Summary: Make career-context replies mirror the API output more strictly
 Details: Similar to the semantic-search prompt tightening, the career-context post-tool prompt now instructs the model to report only the exact API results (job count, salary range, top job titles, top companies) in a fixed database-summary format. This reduces hallucination risk and keeps the assistant reply closely tied to the actual data returned by the tool. Updated the orchestrator test to expect the new career-context reply format.
 
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Make the normal AI response more user-friendly when no tools are invoked
+Details: Added explicit no-tool instructions for greetings, identity questions, and other normal chat so the assistant responds directly instead of invoking tools. Updated the Streamlit welcome copy to introduce MajorMatch in plain language and added a test that locks the no-tool path for casual questions.
 
 Notes
 -----

@@ -166,3 +166,18 @@ def test_career_context_prompt_requests_exact_tool_fields():
     assert "salary_max=95000" in prompt
     assert "top_job_titles" in prompt
     assert "top_companies" in prompt
+
+
+def test_normal_question_does_not_need_tools():
+    def fake_chat_fn(messages, model=None, tools=None, options=None):
+        return {"message": {"content": "I am MajorMatch, an AI assistant that can help with college courses and careers.", "tool_calls": []}}
+
+    result = orchestrator.run_orchestrated_assistant(
+        "hello, what are you?",
+        {"coding": 5, "math": 5, "design": 5},
+        model="test-model",
+        chat_fn=fake_chat_fn,
+    )
+
+    assert result.reply == "I am MajorMatch, an AI assistant that can help with college courses and careers."
+    assert result.tool_trace == []
