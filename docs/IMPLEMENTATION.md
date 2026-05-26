@@ -39,16 +39,6 @@ Implementation Log
 ------------------
 
 
-Date: 2026-05-26
-Author: RV
-Area: UI / Backend / ML
-Files changed:
-- streamlit_app.py
-- api/predict.py
-- tests/test_predict.py
-Summary: Add a dedicated prediction tool panel driven by multiselect feature input
-Details: The chat flow now opens a separate prediction panel when the user asks for the tool, instead of forcing the assistant to infer a prediction from free-form text. The panel mirrors the teammate prototype by letting the user pick interests from the model's feature list and then runs the classifier directly on those selections.
-
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -343,6 +333,17 @@ Files changed:
 - tests/test_orchestrator.py
 Summary: Expose raw model labels from the classifier instead of collapsing to three tracks
 Details: The prediction pipeline now returns the model's actual class label, plus a separate compatibility category for routing. The predictor no longer hardcodes the old three-track collapse, and the job-query builder now handles the broader label space from the dataset. Updated the UI and tests to display and assert the raw label path.
+
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- streamlit_app.py
+- api/predict.py
+- tests/test_predict.py
+Summary: Add a dedicated prediction tool panel driven by multiselect feature input
+Details: The chat flow now opens a separate prediction panel when the user asks for the tool, instead of forcing the assistant to infer a prediction from free-form text. The panel mirrors the teammate prototype by letting the user pick interests from the model's feature list and then runs the classifier directly on those selections.
 
 Notes
 -----
