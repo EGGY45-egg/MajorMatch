@@ -300,6 +300,7 @@ Files changed:
 Summary: Robust tool-argument parsing and sanitization; fixed UI header leakage
 Details: Improved `_parse_tool_arguments()` in `api/orchestrator.py` to decode nested and serialized parameter shapes (handles JSON strings in `object`/`parameters` fields and flattens single-item lists), ensuring tools receive the intended keys (`track`, `location`, `user_query`, `top_k`). Left `_clean_assistant_text()` and deterministic greeting/identity bypasses intact. Updated tests and validated the change by running the test suite — all tests pass (11 passed). Next: add a targeted unit test for malformed tool-call shapes and optionally add runtime logging for malformed calls.
 
+
 Date: 2026-05-26
 Author: RV
 Area: UI / Backend / ML
@@ -310,6 +311,28 @@ Files changed:
 - streamlit_app.py
 Summary: Cap semantic search at five results and add a projection-method selector
 Details: Semantic search now returns at most five matches across the helper, API wrapper, and orchestrated tool path. The semantic-search response also carries PCA, UMAP, and t-SNE projection variants so the Streamlit view can let the user switch the plot method directly.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/predict.py
+- tests/test_predict.py
+Summary: Replace the predictor stub with the random-forest model
+Details: `predict_track()` now loads or retrains the classifier from `ml_model/stud_training.csv`, converts the current coding/math/design profile into the model's interest feature space, and maps the predicted major back into the app's existing track labels. Added tests that cover both the model-backed path and the fallback path.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/predict.py
+- api/jobs.py
+- app_logic.py
+- streamlit_app.py
+- tests/test_predict.py
+- tests/test_orchestrator.py
+Summary: Expose raw model labels from the classifier instead of collapsing to three tracks
+Details: The prediction pipeline now returns the model's actual class label, plus a separate compatibility category for routing. The predictor no longer hardcodes the old three-track collapse, and the job-query builder now handles the broader label space from the dataset. Updated the UI and tests to display and assert the raw label path.
 
 
 Notes

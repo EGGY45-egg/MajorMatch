@@ -112,9 +112,16 @@ def missing_profile_fields(profile: Dict[str, object]) -> List[str]:
 
 
 def recommend_track(profile: ProfileInput) -> Dict[str, object]:
-    track, confidence = predict_track(
-        {"coding": profile.coding, "math": profile.math, "design": profile.design}
-    )
+    prediction = predict_track({"coding": profile.coding, "math": profile.math, "design": profile.design})
+    if isinstance(prediction, dict):
+        return {
+            "track": prediction.get("label"),
+            "confidence": prediction.get("confidence"),
+            "category": prediction.get("category"),
+            "source": prediction.get("source"),
+        }
+
+    track, confidence = prediction
     return {"track": track, "confidence": confidence}
 
 

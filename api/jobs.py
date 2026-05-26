@@ -73,12 +73,23 @@ class CareerContext:
 
 
 def build_job_query(track: str) -> str:
+    normalized = (track or "").strip().lower()
+
+    if any(keyword in normalized for keyword in ("software", "computer", "information technology", "engineering", "electronics", "electrical", "mechanical", "civil", "bca", "cs")):
+        return "software engineer OR developer OR programmer"
+
+    if any(keyword in normalized for keyword in ("data", "science", "math", "statistics", "analytics", "machine learning", "economics", "accounting", "research")):
+        return "data scientist OR machine learning OR analytics"
+
+    if any(keyword in normalized for keyword in ("design", "art", "visual", "architecture", "photography", "fashion", "journalism", "graphics")):
+        return "product designer OR ux designer OR ui designer"
+
     track_map = {
         "Software Engineer": "software engineer OR developer OR programmer",
         "Data Scientist": "data scientist OR machine learning OR analytics",
         "Product Designer": "product designer OR ux designer OR ui designer",
     }
-    return track_map.get(track, track.lower())
+    return track_map.get(track, normalized)
 
 
 def _has_credentials() -> bool:

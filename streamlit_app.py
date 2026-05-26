@@ -12,7 +12,9 @@ from api.search import CourseIndexError, rebuild_index
 
 def _render_tool_prediction(prediction):
     st.markdown("### Career Track Prediction")
-    st.success(f"Predicted track: {prediction['track']}")
+    st.success(f"Predicted major: {prediction.get('track') or prediction.get('label') or 'Unknown'}")
+    if prediction.get("category"):
+        st.caption(f"Career family: {prediction['category']}")
     st.progress(min(float(prediction["confidence"]), 1.0))
     st.caption(f"Confidence score: {prediction['confidence']:.2f}")
 

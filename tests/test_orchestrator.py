@@ -4,6 +4,16 @@ import api.orchestrator as orchestrator
 def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
     monkeypatch.setattr(
         orchestrator,
+        "recommend_track",
+        lambda profile: {
+            "track": "B.Tech.-Computer Science and Engineering",
+            "confidence": 0.84,
+            "category": "Software Engineer",
+            "source": "model",
+        },
+    )
+    monkeypatch.setattr(
+        orchestrator,
         "suggest_career_context",
         lambda track, location="United States": type(
             "FakeContext",
@@ -134,7 +144,7 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
     )
 
     assert result.reply == "Based on your profile, Software Engineer is the strongest fit. Here are the best job and course signals."
-    assert result.artifacts["prediction"]["track"] == "Software Engineer"
+    assert result.artifacts["prediction"]["track"] == "B.Tech.-Computer Science and Engineering"
     assert result.artifacts["career_context"]["job_count"] == 101
     assert result.artifacts["semantic_search"]["results"][0]["title"] == "Web Development with Flask"
     assert [trace.name for trace in result.tool_trace] == [
