@@ -189,14 +189,26 @@ def _render_semantic_search(search_artifact):
 
 
 def _render_tool_output(result: OrchestratorResult):
-    if result.artifacts.get("prediction"):
+    latest_tool_name = result.artifacts.get("latest_tool_name")
+    if latest_tool_name == "predict_track" and result.artifacts.get("prediction"):
         _render_tool_prediction(result.artifacts["prediction"])
+        return
 
-    if result.artifacts.get("career_context"):
+    if latest_tool_name == "get_career_context" and result.artifacts.get("career_context"):
         _render_tool_career_context(result.artifacts["career_context"])
+        return
 
+    if latest_tool_name == "execute_semantic_search" and result.artifacts.get("semantic_search"):
+        _render_semantic_search(result.artifacts["semantic_search"])
+        return
+
+    # Fallback: if the latest tool marker is missing, render one available artifact only.
     if result.artifacts.get("semantic_search"):
         _render_semantic_search(result.artifacts["semantic_search"])
+    elif result.artifacts.get("career_context"):
+        _render_tool_career_context(result.artifacts["career_context"])
+    elif result.artifacts.get("prediction"):
+        _render_tool_prediction(result.artifacts["prediction"])
 
 
 def main():
@@ -244,6 +256,8 @@ def main():
         st.session_state["assistant_profile"] = default_profile_values(5)
     if "assistant_tools_state" not in st.session_state:
         st.session_state["assistant_tools_state"] = {}
+    if "assistant_latest_tool_name" not in st.session_state:
+        st.session_state["assistant_latest_tool_name"] = ""
     if "prediction_tool_open" not in st.session_state:
         st.session_state["prediction_tool_open"] = False
 
@@ -261,6 +275,7 @@ def main():
         # Clear previous artifacts for the new turn so stale tool panels are not shown
         # when this request errors or uses different tools.
         st.session_state["assistant_tools_state"] = {}
+        st.session_state["assistant_latest_tool_name"] = ""
         st.session_state["prediction_tool_open"] = False
 
         intents = detect_tool_intents(user_message)
@@ -286,6 +301,18 @@ def main():
 
             st.session_state["assistant_profile"] = result.profile
             st.session_state["assistant_tools_state"] = result.artifacts
+            latest_tool_name = ""
+            for trace in reversed(result.tool_trace):
+                if trace.name == "execute_semantic_search" and result.artifacts.get("semantic_search"):
+                    latest_tool_name = "execute_semantic_search"
+                    break
+                if trace.name == "get_career_context" and result.artifacts.get("career_context"):
+                    latest_tool_name = "get_career_context"
+                    break
+                if trace.name == "predict_track" and result.artifacts.get("prediction"):
+                    latest_tool_name = "predict_track"
+                    break
+            st.session_state["assistant_latest_tool_name"] = latest_tool_name
             open_predict_ui_requested = any(
                 trace.name == "predict_track"
                 and isinstance(trace.result, dict)
@@ -301,6 +328,7 @@ def main():
             st.session_state["assistant_messages"].append({"role": "assistant", "content": assistant_reply})
         except Exception as error:
             st.session_state["assistant_tools_state"] = {}
+            st.session_state["assistant_latest_tool_name"] = ""
             st.session_state["prediction_tool_open"] = False
             st.session_state["assistant_messages"].append(
                 {
@@ -317,7 +345,10 @@ def main():
         result = OrchestratorResult(
             reply="",
             profile=st.session_state["assistant_profile"],
-            artifacts=tools_state,
+            artifacts={
+                **tools_state,
+                "latest_tool_name": st.session_state.get("assistant_latest_tool_name", ""),
+            },
             tool_trace=[],
             raw="",
         )

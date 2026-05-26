@@ -39,6 +39,7 @@ Implementation Log
 ------------------
 
 
+
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -357,6 +358,14 @@ Files changed:
 - docs/IMPLEMENTATION.md
 Summary: Extend `predict_track` to return and display top-3 predictions
 Details: Added `top_predictions` output to `predict_track()` using model probabilities (top 3 ranked labels with confidence and category), while keeping the existing primary `label`/`confidence` fields for compatibility. Added fallback behavior that returns a single-item `top_predictions` list when the model path is unavailable. Propagated the new field through `recommend_track()` and updated the prediction UI card to show the ranked results. Expanded predictor tests to assert the new payload shape. Validation: full test suite passes (`14 passed`).
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend
+Files changed:
+- streamlit_app.py
+Summary: Render only the most recent tool artifact in the UI
+Details: Updated the chat UI to show a single tool panel per assistant turn. The app now tracks `assistant_latest_tool_name` in session state and clears previous artifacts at the start of each new user turn so stale panels are not shown after timeouts or unrelated requests. The code chooses the most recent tool from the orchestrator `tool_trace` that produced an artifact and renders only that panel; a safe fallback renders one available artifact when the marker is missing. Tests were run after the change and the suite passed (`14 passed`).
 
 Notes
 -----
