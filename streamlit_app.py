@@ -315,7 +315,6 @@ def _render_tool_output(result: OrchestratorResult):
         _render_semantic_search(result.artifacts["semantic_search"])
         return
 
-    # Fallback: if the latest tool marker is missing, render one available artifact only.
     if result.artifacts.get("semantic_search"):
         _render_semantic_search(result.artifacts["semantic_search"])
     elif result.artifacts.get("career_context"):

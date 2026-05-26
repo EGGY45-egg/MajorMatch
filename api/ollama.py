@@ -27,7 +27,6 @@ class OllamaInterviewResult:
     reply: str
     complete: bool
     raw: str = ""
-    used_fallback: bool = False
 
 
 def ollama_is_available(base_url: str = OLLAMA_BASE_URL) -> bool:
@@ -325,7 +324,6 @@ def interview_profile(
             reply=reply,
             complete=complete,
             raw=content,
-            used_fallback=False,
         )
     except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
         raise

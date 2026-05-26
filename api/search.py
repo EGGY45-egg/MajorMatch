@@ -27,7 +27,6 @@ def semantic_search(query: str, courses: List[Dict] | None = None, top_k: int = 
     except Exception:
         k = 5
 
-    # Delegate to course_index.search_courses which handles embeddings & fallback
     raw = search_courses(q, top_k=k)
 
     results: List[Dict] = []

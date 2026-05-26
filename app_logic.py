@@ -56,33 +56,6 @@ def should_open_prediction_tool(message: str) -> bool:
         "what career",
     )
     return any(keyword in lowered for keyword in prediction_keywords)
-
-
-def build_search_query_from_message(message: str, fallback_track: str) -> str:
-    lowered = (message or "").lower().strip()
-    if not lowered:
-        return build_course_query(fallback_track)
-
-    stop_phrases = [
-        "show me",
-        "find me",
-        "courses for",
-        "classes for",
-        "search for",
-        "look for",
-        "recommend",
-        "recommendations",
-        "courses",
-        "classes",
-    ]
-    query = message.strip()
-    for phrase in stop_phrases:
-        if phrase in lowered:
-            query = query.lower().replace(phrase, "")
-    query = " ".join(query.split()).strip(" ,.")
-    return query or build_course_query(fallback_track)
-
-
 def build_course_query(track: str) -> str:
     track_map = {
         "Software Engineer": "programming software engineering systems web development",
