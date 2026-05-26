@@ -18,13 +18,10 @@ ENCODER_PATH = MODEL_DIR / "majormatch_encoder.pkl"
 FEATURES_PATH = MODEL_DIR / "majormatch_features.pkl"
 TRAINING_DATA_PATH = MODEL_DIR / "stud_training.csv"
 
-PROFILE_FIELDS = ("coding", "math", "design")
-
-FEATURE_GROUP_KEYWORDS = {
-    "coding": ("coding", "computer", "software", "program", "information technology", "engineering", "electronics", "electrical", "mechanic", "research", "puzzle"),
-    "math": ("math", "physics", "science", "economics", "account", "analysis", "statistics", "research"),
-    "design": ("design", "drawing", "photography", "architecture", "craft", "makeup", "art", "graphic", "visual", "cartoon"),
-}
+# Legacy structured profile fields and keyword groups removed. The
+# predictor now expects a sequence of selected feature names (strings)
+# or a dict whose keys are selected feature names. Converting numeric
+# skill scores into model features has been removed.
 
 LABEL_CATEGORY_KEYWORDS = {
     "Software Engineer": ("computer", "software", "engineering", "information technology", "bca", "cs", "electronics", "electrical", "mechanical", "civil"),
@@ -48,12 +45,8 @@ def _normalize_score(value: object) -> int:
     return max(0, min(10, score))
 
 
-def _normalize_profile(features: dict) -> Dict[str, int]:
-    profile = {field: 0 for field in PROFILE_FIELDS}
-    for field in PROFILE_FIELDS:
-        if field in features:
-            profile[field] = _normalize_score(features.get(field))
-    return profile
+# Removed: numeric-profile normalization and profile->feature mapping.
+# Callers should pass selected feature names instead of numeric scores.
 
 
 def _score_bucket(score: int) -> int:
@@ -107,47 +100,8 @@ def get_prediction_feature_columns() -> List[str]:
     return list(_get_model_bundle().feature_columns)
 
 
-def _build_feature_groups(feature_columns: Sequence[str]) -> Dict[str, List[str]]:
-    grouped_columns: Dict[str, List[str]] = {field: [] for field in PROFILE_FIELDS}
-    for column in feature_columns:
-        lowered = column.lower()
-        for field, keywords in FEATURE_GROUP_KEYWORDS.items():
-            if any(keyword in lowered for keyword in keywords):
-                grouped_columns[field].append(column)
-                break
-    return grouped_columns
-
-
-def _profile_to_feature_row(profile: Dict[str, int], feature_columns: Sequence[str]) -> Dict[str, int]:
-    grouped_columns = _build_feature_groups(feature_columns)
-    feature_row = {column: 0 for column in feature_columns}
-
-    for field, score in profile.items():
-        bucket = _score_bucket(score)
-        if bucket == 0:
-            continue
-
-        matching_columns = grouped_columns.get(field, [])
-        if not matching_columns:
-            continue
-
-        if bucket == 1:
-            selected_columns = matching_columns[:1]
-        elif bucket == 2:
-            selected_columns = matching_columns[:3]
-        else:
-            selected_columns = matching_columns
-
-        for column in selected_columns:
-            feature_row[column] = 1
-
-    if not any(feature_row.values()):
-        fallback_field = max(profile.items(), key=lambda item: item[1])[0]
-        fallback_columns = grouped_columns.get(fallback_field, [])
-        if fallback_columns:
-            feature_row[fallback_columns[0]] = 1
-
-    return feature_row
+# Removed: functions that mapped high-level skill scores into the model's
+# binary feature space. Use `_selected_features_to_feature_row` instead.
 
 
 def _selected_features_to_feature_row(selected_features: Sequence[str], feature_columns: Sequence[str]) -> Dict[str, int]:
@@ -171,32 +125,33 @@ def _label_to_category(label: str) -> str | None:
     return None
 
 
-def _rule_based_predict(profile: Dict[str, int]) -> Dict[str, object]:
-    coding = profile.get("coding", 0)
-    math = profile.get("math", 0)
-    design = profile.get("design", 0)
+def _rule_based_predict(selected_features: Sequence[str]) -> Dict[str, object]:
+    """Simple fallback that selects a label based on keywords found in the
+    selected feature names. This is intentionally simple and only used when
+    `use_fallback` is enabled.
+    """
+    joined = " ".join([str(s).lower() for s in selected_features or []])
+    for label, keywords in LABEL_CATEGORY_KEYWORDS.items():
+        if any(k in joined for k in keywords):
+            return {
+                "label": label,
+                "confidence": 0.5,
+                "category": _label_to_category(label),
+                "source": "fallback",
+                "top_predictions": [
+                    {"label": label, "confidence": 0.5, "category": _label_to_category(label)}
+                ],
+            }
 
-    if coding >= math and coding >= design:
-        label = "Software Engineer"
-        confidence = coding / 10.0
-    elif math >= coding and math >= design:
-        label = "Data Scientist"
-        confidence = math / 10.0
-    else:
-        label = "Product Designer"
-        confidence = design / 10.0
-
+    # Default fallback
+    default = list(LABEL_CATEGORY_KEYWORDS.keys())[0]
     return {
-        "label": label,
-        "confidence": confidence,
-        "category": _label_to_category(label),
+        "label": default,
+        "confidence": 0.25,
+        "category": _label_to_category(default),
         "source": "fallback",
         "top_predictions": [
-            {
-                "label": label,
-                "confidence": confidence,
-                "category": _label_to_category(label),
-            }
+            {"label": default, "confidence": 0.25, "category": _label_to_category(default)}
         ],
     }
 
@@ -232,17 +187,16 @@ def predict_track(features: dict | Sequence[str], use_fallback: bool = True) -> 
     `use_fallback` is False, exceptions from model loading/inference are
     propagated to the caller.
     """
-    profile = _normalize_profile(features) if isinstance(features, dict) else {field: 0 for field in PROFILE_FIELDS}
+    # If a dict is provided, treat its keys as selected feature names.
+    selected_features: Sequence[str]
+    if isinstance(features, dict):
+        selected_features = list(features.keys())
+    else:
+        selected_features = list(features)
 
     try:
         bundle = _get_model_bundle()
-        if isinstance(features, dict):
-            if any(key in PROFILE_FIELDS for key in features):
-                model_input = _profile_to_feature_row(profile, bundle.feature_columns)
-            else:
-                model_input = _selected_features_to_feature_row(features.keys(), bundle.feature_columns)
-        else:
-            model_input = _selected_features_to_feature_row(features, bundle.feature_columns)
+        model_input = _selected_features_to_feature_row(selected_features, bundle.feature_columns)
         model_frame = pd.DataFrame([model_input], columns=bundle.feature_columns)
 
         encoded_prediction = bundle.model.predict(model_frame)[0]
@@ -264,5 +218,5 @@ def predict_track(features: dict | Sequence[str], use_fallback: bool = True) -> 
         }
     except Exception:
         if use_fallback:
-            return _rule_based_predict(profile)
+            return _rule_based_predict(selected_features)
         raise
