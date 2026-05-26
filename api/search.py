@@ -23,7 +23,7 @@ def semantic_search(query: str, courses: List[Dict] | None = None, top_k: int = 
     except Exception:
         q = ""
     try:
-        k = max(1, int(top_k))
+        k = max(1, min(int(top_k), 5))
     except Exception:
         k = 5
 

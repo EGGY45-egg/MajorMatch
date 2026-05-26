@@ -37,17 +37,6 @@ Details: Created minimal Streamlit app, prediction/search stubs, and example cou
 
 Implementation Log
 ------------------
-Date: 2026-05-26
-Author: RV
-Area: UI / Backend / ML
-Files changed:
-- api/orchestrator.py
-- tests/test_orchestrator.py
-- docs/IMPLEMENTATION.md
-Summary: Robust tool-argument parsing and sanitization; fixed UI header leakage
-Details: Improved `_parse_tool_arguments()` in `api/orchestrator.py` to decode nested and serialized parameter shapes (handles JSON strings in `object`/`parameters` fields and flattens single-item lists), ensuring tools receive the intended keys (`track`, `location`, `user_query`, `top_k`). Left `_clean_assistant_text()` and deterministic greeting/identity bypasses intact. Updated tests and validated the change by running the test suite — all tests pass (11 passed). Next: add a targeted unit test for malformed tool-call shapes and optionally add runtime logging for malformed calls.
-
-
 
 
 Date: 2026-05-25
@@ -308,6 +297,19 @@ Files changed:
 - api/orchestrator.py
 - tests/test_orchestrator.py
 - docs/IMPLEMENTATION.md
+Summary: Robust tool-argument parsing and sanitization; fixed UI header leakage
+Details: Improved `_parse_tool_arguments()` in `api/orchestrator.py` to decode nested and serialized parameter shapes (handles JSON strings in `object`/`parameters` fields and flattens single-item lists), ensuring tools receive the intended keys (`track`, `location`, `user_query`, `top_k`). Left `_clean_assistant_text()` and deterministic greeting/identity bypasses intact. Updated tests and validated the change by running the test suite — all tests pass (11 passed). Next: add a targeted unit test for malformed tool-call shapes and optionally add runtime logging for malformed calls.
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- app_logic.py
+- api/search.py
+- api/orchestrator.py
+- streamlit_app.py
+Summary: Cap semantic search at five results and add a projection-method selector
+Details: Semantic search now returns at most five matches across the helper, API wrapper, and orchestrated tool path. The semantic-search response also carries PCA, UMAP, and t-SNE projection variants so the Streamlit view can let the user switch the plot method directly.
 
 
 Notes

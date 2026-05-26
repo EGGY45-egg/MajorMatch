@@ -55,7 +55,53 @@ def _render_semantic_search(search_artifact):
         st.caption(f"Query: {query}")
     st.info(summarize_matches(results))
 
-    if projection.get("available"):
+    projection_methods = projection.get("methods") or {}
+    selected_method = str(projection.get("method") or "pca").lower()
+    method_labels = {"pca": "PCA", "umap": "UMAP", "tsne": "t-SNE"}
+
+    available_methods = [method for method in ("pca", "umap", "tsne") if projection_methods.get(method, {}).get("available")]
+    if projection.get("available") and available_methods:
+        default_index = available_methods.index(selected_method) if selected_method in available_methods else 0
+        chosen_method = st.selectbox(
+            "Projection method",
+            available_methods,
+            index=default_index,
+            format_func=lambda method: method_labels.get(method, method.upper()),
+            key="semantic_projection_method",
+        )
+        chosen_projection = projection_methods.get(chosen_method) or projection
+        course_points = chosen_projection.get("courses") or []
+        query_point = chosen_projection.get("query_point")
+        if course_points and query_point:
+            top_title = results[0].get("title") if results else None
+            frame = {
+                "title": [point["title"] for point in course_points] + [query_point["title"]],
+                "description": [point["description"] for point in course_points] + [query_point["description"]],
+                "x": [point["x"] for point in course_points] + [query_point["x"]],
+                "y": [point["y"] for point in course_points] + [query_point["y"]],
+                "kind": [
+                    "top_match" if top_title and point["title"] == top_title else "course"
+                    for point in course_points
+                ]
+                + ["query"],
+            }
+
+            figure = px.scatter(
+                frame,
+                x="x",
+                y="y",
+                color="kind",
+                color_discrete_map={"course": "blue", "top_match": "red", "query": "green"},
+                hover_name="title",
+                hover_data={"description": True, "x": False, "y": False, "kind": True},
+                title=f"{method_labels.get(chosen_method, chosen_method.upper())} projection of semantic search results",
+            )
+            figure.update_traces(marker=dict(size=11, opacity=0.85))
+            figure.update_layout(height=460, margin=dict(l=20, r=20, t=50, b=20))
+            st.plotly_chart(figure, use_container_width=True)
+        else:
+            st.info("Semantic search returned results, but the projection map is not available yet.")
+    elif projection.get("available"):
         method = str(projection.get("method") or "pca").upper()
         course_points = projection.get("courses") or []
         query_point = projection.get("query_point")
@@ -91,7 +137,7 @@ def _render_semantic_search(search_artifact):
     elif projection.get("error"):
         st.info(f"Visualization unavailable: {projection['error']}")
 
-    for course in results:
+    for course in results[:5]:
         with st.container(border=True):
             st.markdown(f"**{course.get('title', 'Untitled')}**")
             st.write(course.get("description", "No description available."))

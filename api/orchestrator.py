@@ -228,48 +228,61 @@ def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int],
 
     if name == "execute_semantic_search":
         query = str(arguments.get("user_query") or "").strip()
-        top_k = int(arguments.get("top_k") or 5)
+        top_k = max(1, min(int(arguments.get("top_k") or 5), 5))
         projection_method = str(arguments.get("projection_method") or "pca").strip().lower() or "pca"
+        if projection_method == "tnse":
+            projection_method = "tsne"
         results = suggest_courses(query, top_k=top_k)
 
-        projection: Dict[str, Any]
-        try:
-            course_points, query_point = project_courses_with_query(query, method=projection_method)
-            projection = {
-                "available": True,
-                "method": projection_method,
-                "courses": [
-                    {
-                        "id": point.id,
-                        "title": point.title,
-                        "description": point.description,
-                        "x": point.x,
-                        "y": point.y,
-                    }
-                    for point in course_points
-                ],
-                "query_point": None
-                if query_point is None
-                else {
-                    "id": query_point.id,
-                    "title": query_point.title,
-                    "description": query_point.description,
-                    "x": query_point.x,
-                    "y": query_point.y,
-                },
-            }
-        except Exception as error:
-            projection = {
-                "available": False,
-                "method": projection_method,
-                "error": str(error),
-            }
+        projection_methods: Dict[str, Dict[str, Any]] = {}
+        for method in ("pca", "umap", "tsne"):
+            try:
+                course_points, query_point = project_courses_with_query(query, method=method)
+                projection_methods[method] = {
+                    "available": True,
+                    "method": method,
+                    "courses": [
+                        {
+                            "id": point.id,
+                            "title": point.title,
+                            "description": point.description,
+                            "x": point.x,
+                            "y": point.y,
+                        }
+                        for point in course_points
+                    ],
+                    "query_point": None
+                    if query_point is None
+                    else {
+                        "id": query_point.id,
+                        "title": query_point.title,
+                        "description": query_point.description,
+                        "x": query_point.x,
+                        "y": query_point.y,
+                    },
+                }
+            except Exception as error:
+                projection_methods[method] = {
+                    "available": False,
+                    "method": method,
+                    "error": str(error),
+                }
+
+        selected_projection = projection_methods.get(projection_method) or projection_methods.get("pca", {})
+        if selected_projection.get("available") is not True:
+            selected_projection = next(
+                (value for value in projection_methods.values() if value.get("available")),
+                selected_projection,
+            )
 
         return {
             "query": query,
             "top_k": top_k,
             "results": results,
-            "projection": projection,
+            "projection": {
+                **selected_projection,
+                "methods": projection_methods,
+            },
         }
 
     raise ValueError(f"Unsupported tool: {name}")
@@ -306,7 +319,7 @@ def _build_final_response_prompt(tool_trace: List[ToolTrace], artifacts: Dict[st
         elif trace.name == "execute_semantic_search":
             semantic_search = artifacts.get("semantic_search") or {}
             results = semantic_search.get("results") or []
-            top_titles = [item.get("title", "Untitled") for item in results[:3]]
+            top_titles = [item.get("title", "Untitled") for item in results[:5]]
             projection = semantic_search.get("projection") or {}
             sections.append(
                 "Semantic search result: "

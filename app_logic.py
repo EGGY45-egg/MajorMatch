@@ -119,7 +119,8 @@ def recommend_track(profile: ProfileInput) -> Dict[str, object]:
 
 
 def suggest_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
-    return semantic_search(query, top_k=top_k)
+    capped_top_k = max(1, min(int(top_k), 5))
+    return semantic_search(query, top_k=capped_top_k)
 
 
 def suggest_career_context(track: str, location: str = "United States"):
@@ -173,7 +174,7 @@ def build_course_query(track: str) -> str:
 def summarize_matches(courses: Sequence[Dict[str, str]]) -> str:
     if not courses:
         return "No matches found yet. Try a broader search phrase."
-    titles = [course.get("title", "") for course in courses[:3] if course.get("title")]
+    titles = [course.get("title", "") for course in courses[:5] if course.get("title")]
     if not titles:
         return "No course titles available in the current results."
     if len(titles) == 1:
