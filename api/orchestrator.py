@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from app_logic import ProfileInput, coerce_profile_values, profile_to_text, recommend_track, suggest_career_context, suggest_courses
 from course_index import search_courses_with_projection
@@ -310,7 +310,7 @@ def run_orchestrated_assistant(
     max_steps: int = 4,
     chat_fn: Callable[..., Dict[str, Any]] = chat_completion,
     # Optional streaming hook: a stream-capable chat function and a chunk callback.
-    stream_chat_fn: Optional[Callable[..., Any]] = None,
+    stream_chat_fn: Optional[Callable[..., Iterable[str]]] = None,
     on_stream_chunk: Optional[Callable[[str], None]] = None,
 ) -> OrchestratorResult:
     profile = coerce_profile_values(current_profile)
@@ -370,6 +370,32 @@ def run_orchestrated_assistant(
                         "content": _build_final_response_prompt(trace, artifacts),
                     },
                 ]
+                if stream_chat_fn and on_stream_chunk:
+                    final_content = ""
+                    try:
+                        for chunk in stream_chat_fn(
+                            final_messages,
+                            model=resolved_model,
+                            options={"temperature": 0.2},
+                        ):
+                            cleaned_chunk = _clean_assistant_text(chunk)
+                            if not cleaned_chunk:
+                                continue
+                            on_stream_chunk(cleaned_chunk)
+                            final_content += cleaned_chunk
+                        if final_content:
+                            raw = "<streamed>"
+                            return OrchestratorResult(
+                                reply=final_content,
+                                profile=profile,
+                                artifacts=artifacts,
+                                tool_trace=trace,
+                                raw=raw,
+                            )
+                    except Exception:
+                        # Fall back to the synchronous final-response path if streaming fails.
+                        pass
+
                 final_response = chat_fn(
                     final_messages,
                     model=resolved_model,
