@@ -36,7 +36,7 @@ This project supports the workflow of career-track recommendation, career-contex
 
 ### Source Name: [features.md](features.md)
 
-- Purpose: project profile and architecture summary.
+ - Purpose: project features and architecture summary.
 - Direct link: [features.md](features.md)
 - Coverage: project title, stakeholder group, problem statement, and technical architecture summary.
 - Time period covered: current project framing document.

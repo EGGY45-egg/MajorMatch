@@ -62,13 +62,17 @@ def test_predict_track_falls_back_when_model_loading_fails(monkeypatch):
 
     prediction = predict_api.predict_track({"coding": 9, "math": 4, "design": 2})
 
-    assert prediction["label"] == "Software Engineer"
-    assert prediction["confidence"] == 0.9
+    # With the structured numeric profile removed, the fallback now
+    # inspects selected feature names (dict keys) and picks a label by
+    # keyword matching. The provided keys include 'math', so the
+    # fallback is expected to pick Data Scientist.
+    assert prediction["label"] == "Data Scientist"
+    assert prediction["confidence"] == 0.5
     assert prediction["top_predictions"] == [
         {
-            "label": "Software Engineer",
-            "confidence": 0.9,
-            "category": "Software Engineer",
+            "label": "Data Scientist",
+            "confidence": 0.5,
+            "category": "Data Scientist",
         }
     ]
 

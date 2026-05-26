@@ -143,7 +143,7 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
                 }
             },
             {"message": {"content": "Here is a compact plan for you.", "tool_calls": []}},
-            {"message": {"content": "Based on your profile, Software Engineer is the strongest fit. Here are the best job and course signals.", "tool_calls": []}},
+            {"message": {"content": "Software Engineer is the strongest fit. Here are the best job and course signals.", "tool_calls": []}},
         ]
     )
 
@@ -156,10 +156,10 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
         chat_fn=fake_chat_fn,
     )
 
-    assert result.reply == "Based on your profile, Software Engineer is the strongest fit. Here are the best job and course signals."
-    # With structured profile removed, a model-supplied numeric profile will
-    # cause the orchestrator to request the front-end prediction UI instead
-    # of inferring a recommendation automatically.
+    assert result.reply == "Software Engineer is the strongest fit. Here are the best job and course signals."
+    # With structured profile removed, the orchestrator will request the
+    # front-end prediction UI when numeric skill keys are present, rather
+    # than inferring a recommendation automatically.
     assert result.tool_trace[0].name == "predict_track"
     assert result.tool_trace[0].result.get("action") == "open_ui"
     assert result.artifacts["career_context"]["job_count"] == 101
