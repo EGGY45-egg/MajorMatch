@@ -250,11 +250,12 @@ def _try_extract_tool_call_from_content(message: Dict[str, Any]) -> List[Dict[st
 
 def _execute_tool(name: str, arguments: Dict[str, Any], location: str) -> Dict[str, Any]:
     if name == "predict_track":
-        # Disallow implicit profile-based predictions. The prediction tool must
-        # be called with explicit selected features (a sequence) or the
-        # front-end UI should be opened via `open_ui` so the user can select
-        # interests. If the model supplies numeric coding/math/design keys, do
-        # not use them to infer a profile — instead, ask the UI to open.
+        # Disallow implicit inference of user skills for predictions. The
+        # prediction tool must be called with explicit selected features (a
+        # sequence) or the front-end UI should be opened via `open_ui` so the
+        # user can select interests. If the model supplies numeric
+        # coding/math/design keys, do not infer a user profile from them —
+        # instead, ask the UI to open.
         provided_numeric = any(k in arguments for k in ("coding", "math", "design"))
         if provided_numeric or arguments.get("open_ui") is True:
             return {
@@ -374,15 +375,15 @@ def run_orchestrated_assistant(
         "Do not call tools for greetings, introductions, identity questions, or other normal chat. "
         "Do not call tools for gratitude, acknowledgements, or wrap-up messages. "
         "If the user asks what you are or says hello, answer directly with a friendly plain-language introduction. "
-        "Call predict_track when the user's profile or skill fit needs a recommendation. "
+        "Call predict_track when the user's skill fit or preferences need a recommendation. "
         "Call get_career_context when the user asks about market demand, salary, or career outlook. "
         "Call execute_semantic_search when the user asks for courses, learning resources, course planning, or a visual map of relevant options. "
         "When no tool is needed, respond naturally and user-friendly without mentioning tools. "
         "Keep replies concise, grounded in tool results when used, and user-facing."
     )
 
-    # Do not include the user's structured profile in system prompts. The
-    # assistant should not make assumptions based on profile values unless a
+    # Do not include any structured profile values in system prompts. The
+    # assistant should not make assumptions about user skills unless a
     # prediction tool is explicitly invoked. Only include non-sensitive
     # contextual info such as preferred location.
     messages: List[Dict[str, Any]] = [

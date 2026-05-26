@@ -223,7 +223,15 @@ def _build_top_predictions(bundle: ModelBundle, model_frame: pd.DataFrame) -> Li
     return top_predictions
 
 
-def predict_track(features: dict | Sequence[str]) -> Dict[str, object]:
+def predict_track(features: dict | Sequence[str], use_fallback: bool = True) -> Dict[str, object]:
+    """Predict a career track from either a numeric feature dict or a
+    sequence of selected feature names.
+
+    If `use_fallback` is True (default), a simple rule-based predictor is
+    returned when model artifacts are missing or inference fails. If
+    `use_fallback` is False, exceptions from model loading/inference are
+    propagated to the caller.
+    """
     profile = _normalize_profile(features) if isinstance(features, dict) else {field: 0 for field in PROFILE_FIELDS}
 
     try:
@@ -255,4 +263,6 @@ def predict_track(features: dict | Sequence[str]) -> Dict[str, object]:
             "top_predictions": top_predictions,
         }
     except Exception:
-        return _rule_based_predict(profile)
+        if use_fallback:
+            return _rule_based_predict(profile)
+        raise
