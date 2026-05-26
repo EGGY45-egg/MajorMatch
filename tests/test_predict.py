@@ -62,3 +62,24 @@ def test_predict_track_falls_back_when_model_loading_fails(monkeypatch):
 
     assert prediction["label"] == "Software Engineer"
     assert prediction["confidence"] == 0.9
+
+
+def test_predict_track_accepts_direct_feature_selections(monkeypatch):
+    fake_model = FakeModel(1, [0.21, 0.79])
+    fake_encoder = FakeEncoder(["B.Tech.-Computer Science and Engineering", "BVA- Bachelor of Visual Arts"])
+    fake_bundle = FakeBundle(
+        model=fake_model,
+        encoder=fake_encoder,
+        feature_columns=["Coding", "Mathematics", "Designing", "Computer Parts"],
+    )
+
+    monkeypatch.setattr(predict_api, "_load_artifacts_from_disk", lambda: fake_bundle)
+    predict_api._get_model_bundle.cache_clear()
+
+    prediction = predict_api.predict_track(["Coding", "Mathematics"])
+
+    assert prediction["label"] == "BVA- Bachelor of Visual Arts"
+    assert prediction["source"] == "model"
+    assert fake_model.last_input is not None
+    assert fake_model.last_input.iloc[0]["Coding"] == 1
+    assert fake_model.last_input.iloc[0]["Mathematics"] == 1

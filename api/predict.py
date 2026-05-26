@@ -102,6 +102,11 @@ def _get_model_bundle() -> ModelBundle:
     return bundle
 
 
+def get_prediction_feature_columns() -> List[str]:
+    """Return the feature columns used by the teammate classifier."""
+    return list(_get_model_bundle().feature_columns)
+
+
 def _build_feature_groups(feature_columns: Sequence[str]) -> Dict[str, List[str]]:
     grouped_columns: Dict[str, List[str]] = {field: [] for field in PROFILE_FIELDS}
     for column in feature_columns:
@@ -145,6 +150,19 @@ def _profile_to_feature_row(profile: Dict[str, int], feature_columns: Sequence[s
     return feature_row
 
 
+def _selected_features_to_feature_row(selected_features: Sequence[str], feature_columns: Sequence[str]) -> Dict[str, int]:
+    selected = {str(feature).strip() for feature in selected_features if str(feature).strip()}
+    feature_row = {column: 0 for column in feature_columns}
+    for column in feature_columns:
+        if column in selected:
+            feature_row[column] = 1
+
+    if not any(feature_row.values()) and feature_columns:
+        feature_row[feature_columns[0]] = 1
+
+    return feature_row
+
+
 def _label_to_category(label: str) -> str | None:
     normalized = (label or "").strip().lower()
     for category, keywords in LABEL_CATEGORY_KEYWORDS.items():
@@ -176,12 +194,18 @@ def _rule_based_predict(profile: Dict[str, int]) -> Dict[str, object]:
     }
 
 
-def predict_track(features: dict) -> Dict[str, object]:
-    profile = _normalize_profile(features)
+def predict_track(features: dict | Sequence[str]) -> Dict[str, object]:
+    profile = _normalize_profile(features) if isinstance(features, dict) else {field: 0 for field in PROFILE_FIELDS}
 
     try:
         bundle = _get_model_bundle()
-        model_input = _profile_to_feature_row(profile, bundle.feature_columns)
+        if isinstance(features, dict):
+            if any(key in PROFILE_FIELDS for key in features):
+                model_input = _profile_to_feature_row(profile, bundle.feature_columns)
+            else:
+                model_input = _selected_features_to_feature_row(features.keys(), bundle.feature_columns)
+        else:
+            model_input = _selected_features_to_feature_row(features, bundle.feature_columns)
         model_frame = pd.DataFrame([model_input], columns=bundle.feature_columns)
 
         encoded_prediction = bundle.model.predict(model_frame)[0]

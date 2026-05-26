@@ -80,15 +80,15 @@ def build_tool_schemas() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "predict_track",
-                "description": "Predict the most likely career track from coding, math, and design skill ratings.",
+                "description": "Predict the most likely career track based on skill. If called without numeric inputs, the front-end should open the prediction UI to collect user inputs.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "coding": {"type": "integer", "minimum": 0, "maximum": 10},
                         "math": {"type": "integer", "minimum": 0, "maximum": 10},
                         "design": {"type": "integer", "minimum": 0, "maximum": 10},
-                    },
-                    "required": ["coding", "math", "design"],
+                        "open_ui": {"type": "boolean", "description": "If true, request the front-end to open the predict UI for interactive input."},
+                    }
                 },
             },
         },
@@ -214,6 +214,16 @@ def _extract_tool_calls(message: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int], location: str) -> Dict[str, Any]:
     if name == "predict_track":
         merged_profile = coerce_profile_values({**profile, **arguments})
+        # If the tool is called without explicit numeric inputs (or with open_ui=True),
+        # instruct the front-end to open the interactive prediction UI instead of
+        # attempting to parse values from the model output.
+        provided_numeric = any(k in arguments for k in ("coding", "math", "design"))
+        if not provided_numeric or arguments.get("open_ui") is True:
+            return {
+                "profile": merged_profile,
+                "action": "open_ui",
+                "message": "open_predict_ui",
+            }
         recommendation = recommend_track(ProfileInput(**merged_profile))
         return {
             "profile": merged_profile,

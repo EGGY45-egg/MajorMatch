@@ -3,10 +3,12 @@ import streamlit as st
 
 from app_logic import (
     default_profile_values,
+    detect_tool_intents,
     summarize_matches,
 )
 from api.ollama import chat_completion, ollama_is_available, resolve_chat_model
 from api.orchestrator import OrchestratorResult, run_orchestrated_assistant
+from api.predict import get_prediction_feature_columns, predict_track
 from api.search import CourseIndexError, rebuild_index
 
 
@@ -17,6 +19,35 @@ def _render_tool_prediction(prediction):
         st.caption(f"Career family: {prediction['category']}")
     st.progress(min(float(prediction["confidence"]), 1.0))
     st.caption(f"Confidence score: {prediction['confidence']:.2f}")
+
+
+def _render_prediction_tool():
+    st.markdown("### Prediction Tool")
+    st.caption("Choose the interests that fit you best, then run the model to get the raw major label.")
+
+    try:
+        feature_columns = get_prediction_feature_columns()
+    except Exception as error:
+        st.error(f"Could not load prediction features: {error}")
+        return
+
+    selected_interests = st.multiselect(
+        "What are you good at?",
+        options=feature_columns,
+        key="prediction_selected_interests",
+        placeholder="Search and select your strongest interests...",
+    )
+
+    if st.button("Analyze My Track", key="prediction_analyze_button"):
+        if not selected_interests:
+            st.warning("Please select at least one interest before running the prediction.")
+        else:
+            prediction = predict_track(selected_interests)
+            if isinstance(prediction, dict):
+                _render_tool_prediction(prediction)
+            else:
+                label, confidence = prediction
+                _render_tool_prediction({"label": label, "confidence": confidence, "category": None})
 
 
 def _render_tool_career_context(career_context):
@@ -201,14 +232,31 @@ def main():
         st.session_state["assistant_profile"] = default_profile_values(5)
     if "assistant_tools_state" not in st.session_state:
         st.session_state["assistant_tools_state"] = {}
+    if "prediction_tool_open" not in st.session_state:
+        st.session_state["prediction_tool_open"] = False
 
     for message in st.session_state["assistant_messages"]:
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
+    if st.session_state.get("prediction_tool_open"):
+        st.divider()
+        _render_prediction_tool()
+
     user_message = st.chat_input("Ask a question about majors, careers, courses, or maps...")
     if user_message:
         st.session_state["assistant_messages"].append({"role": "user", "content": user_message})
+
+        intents = detect_tool_intents(user_message)
+        if "career_track" in intents and not any(intent in intents for intent in ("course_search", "career_context", "visualization")):
+            st.session_state["prediction_tool_open"] = True
+            st.session_state["assistant_messages"].append(
+                {
+                    "role": "assistant",
+                    "content": "I opened the prediction tool below. Pick the interests that match you best, then run the analyzer.",
+                }
+            )
+            st.rerun()
 
         try:
             profile_values = st.session_state["assistant_profile"]
