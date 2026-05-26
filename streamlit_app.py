@@ -258,6 +258,10 @@ def main():
     user_message = st.chat_input("Ask a question about majors, careers, courses, or maps...")
     if user_message:
         st.session_state["assistant_messages"].append({"role": "user", "content": user_message})
+        # Clear previous artifacts for the new turn so stale tool panels are not shown
+        # when this request errors or uses different tools.
+        st.session_state["assistant_tools_state"] = {}
+        st.session_state["prediction_tool_open"] = False
 
         intents = detect_tool_intents(user_message)
         if "career_track" in intents and not any(intent in intents for intent in ("course_search", "career_context", "visualization")):
@@ -282,10 +286,22 @@ def main():
 
             st.session_state["assistant_profile"] = result.profile
             st.session_state["assistant_tools_state"] = result.artifacts
+            open_predict_ui_requested = any(
+                trace.name == "predict_track"
+                and isinstance(trace.result, dict)
+                and (
+                    trace.result.get("action") == "open_ui"
+                    or trace.result.get("message") == "open_predict_ui"
+                )
+                for trace in result.tool_trace
+            )
+            st.session_state["prediction_tool_open"] = open_predict_ui_requested
 
             assistant_reply = result.reply or "I am MajorMatch, an AI assistant that can help you decide what course in college or career to take."
             st.session_state["assistant_messages"].append({"role": "assistant", "content": assistant_reply})
         except Exception as error:
+            st.session_state["assistant_tools_state"] = {}
+            st.session_state["prediction_tool_open"] = False
             st.session_state["assistant_messages"].append(
                 {
                     "role": "assistant",
