@@ -152,13 +152,16 @@ def test_orchestrated_assistant_executes_tools_in_sequence(monkeypatch):
 
     result = orchestrator.run_orchestrated_assistant(
         "I like coding and want a practical path.",
-        {"coding": 9, "math": 4, "design": 2},
         model="test-model",
         chat_fn=fake_chat_fn,
     )
 
     assert result.reply == "Based on your profile, Software Engineer is the strongest fit. Here are the best job and course signals."
-    assert result.artifacts["prediction"]["track"] == "B.Tech.-Computer Science and Engineering"
+    # With structured profile removed, a model-supplied numeric profile will
+    # cause the orchestrator to request the front-end prediction UI instead
+    # of inferring a recommendation automatically.
+    assert result.tool_trace[0].name == "predict_track"
+    assert result.tool_trace[0].result.get("action") == "open_ui"
     assert result.artifacts["career_context"]["job_count"] == 101
     assert result.artifacts["semantic_search"]["results"][0]["title"] == "Web Development with Flask"
     assert [trace.name for trace in result.tool_trace] == [
@@ -195,7 +198,6 @@ def test_career_context_prompt_requests_exact_tool_fields():
 def test_normal_question_does_not_need_tools():
     result = orchestrator.run_orchestrated_assistant(
         "hello, what are you?",
-        {"coding": 5, "math": 5, "design": 5},
         model="test-model",
     )
 
@@ -209,7 +211,6 @@ def test_assistant_header_tokens_are_stripped_from_final_reply():
 
     result = orchestrator.run_orchestrated_assistant(
         "recommend a course path",
-        {"coding": 5, "math": 5, "design": 5},
         model="test-model",
         chat_fn=fake_chat_fn,
     )
@@ -226,7 +227,6 @@ def test_identity_question_skips_tools_entirely():
 
     result = orchestrator.run_orchestrated_assistant(
         "what are you?",
-        {"coding": 5, "math": 5, "design": 5},
         model="test-model",
         chat_fn=fake_chat_fn,
     )
@@ -245,7 +245,6 @@ def test_app_intro_question_skips_tools_entirely():
 
     result = orchestrator.run_orchestrated_assistant(
         "What can MajorMatch help me with?",
-        {"coding": 5, "math": 5, "design": 5},
         model="test-model",
         chat_fn=fake_chat_fn,
     )
@@ -314,7 +313,6 @@ def test_streamed_final_reply_preserves_spaces(monkeypatch):
 
     result = orchestrator.run_orchestrated_assistant(
         "How many jobs are there for data scientist?",
-        {"coding": 5, "math": 5, "design": 5},
         model="test-model",
         chat_fn=fake_chat_fn,
         stream_chat_fn=fake_stream_chat_fn,

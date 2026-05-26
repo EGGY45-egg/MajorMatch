@@ -12,8 +12,6 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 # Collect CSV files if present; callers can use `DATA_DIR` or `COURSE_CSVS`.
 COURSE_CSVS = sorted([p for p in DATA_DIR.glob("*.csv")]) if DATA_DIR.exists() else []
-PROFILE_FIELDS = ("coding", "math", "design")
-
 TOOL_INTENT_KEYWORDS = {
     "career_track": [
         "recommend",
@@ -57,62 +55,16 @@ TOOL_INTENT_KEYWORDS = {
 }
 
 
-@dataclass(frozen=True)
-class ProfileInput:
-    coding: int
-    math: int
-    design: int
 
 
-def normalize_score(value: object) -> int:
-    try:
-        score = int(round(float(value)))
-    except (TypeError, ValueError):
-        score = 0
-    return max(0, min(10, score))
 
-
-def default_profile_values(default: int = 0) -> Dict[str, int]:
-    return {field: default for field in PROFILE_FIELDS}
-
-
-def coerce_profile_values(values: Dict[str, object]) -> Dict[str, int]:
-    profile = default_profile_values()
-    for field in PROFILE_FIELDS:
-        if field in values:
-            profile[field] = normalize_score(values[field])
-    return profile
-
-
-def merge_profile_values(base: Dict[str, object], updates: Dict[str, object]) -> Dict[str, int]:
-    merged = coerce_profile_values(base)
-    for field in PROFILE_FIELDS:
-        if field in updates:
-            merged[field] = normalize_score(updates[field])
-    return merged
-
-
-def profile_is_empty(profile: Dict[str, object]) -> bool:
-    coerced = coerce_profile_values(profile)
-    return all(coerced[field] == 0 for field in PROFILE_FIELDS)
-
-
-def profile_from_sliders(coding: int, math: int, design: int) -> Dict[str, int]:
-    return coerce_profile_values({"coding": coding, "math": math, "design": design})
-
-
-def profile_to_text(profile: Dict[str, object]) -> str:
-    coerced = coerce_profile_values(profile)
-    return ", ".join(f"{field}={coerced[field]}" for field in PROFILE_FIELDS)
-
-
-def missing_profile_fields(profile: Dict[str, object]) -> List[str]:
-    coerced = coerce_profile_values(profile)
-    return [field for field in PROFILE_FIELDS if coerced[field] == 0]
-
-
-def recommend_track(profile: ProfileInput) -> Dict[str, object]:
-    prediction = predict_track({"coding": profile.coding, "math": profile.math, "design": profile.design})
+def recommend_track(features: dict | Sequence[str]) -> Dict[str, object]:
+    """
+    Recommend a track based on either a features dict (deprecated profile-like dict)
+    or a sequence of selected feature names. For compatibility, forward to
+    `predict_track()` which accepts either a dict or a sequence.
+    """
+    prediction = predict_track(features)
     if isinstance(prediction, dict):
         result = {
             "track": prediction.get("label"),

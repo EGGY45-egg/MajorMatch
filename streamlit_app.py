@@ -2,7 +2,6 @@ import plotly.express as px
 import streamlit as st
 
 from app_logic import (
-    default_profile_values,
     detect_tool_intents,
     summarize_matches,
 )
@@ -344,8 +343,8 @@ def main():
                 "content": "I can help you decide what course in college or career to take. Ask me a question and I will answer directly unless a tool is useful.",
             }
         ]
-    if "assistant_profile" not in st.session_state:
-        st.session_state["assistant_profile"] = default_profile_values(5)
+    # The structured `assistant_profile` concept was removed. Keep prediction
+    # UI state separate and only open the UI when requested by the assistant.
     if "assistant_tools_state" not in st.session_state:
         st.session_state["assistant_tools_state"] = {}
     if "assistant_latest_tool_name" not in st.session_state:
@@ -382,7 +381,8 @@ def main():
             st.rerun()
 
         try:
-            profile_values = st.session_state["assistant_profile"]
+            # profile_values no longer used; orchestrator no longer accepts a
+            # structured profile argument.
 
             # Prepare a streaming placeholder so assistant output appears chunked
             # in the chat UI as it is generated.
@@ -400,7 +400,6 @@ def main():
 
             result = run_orchestrated_assistant(
                 user_message,
-                profile_values,
                 location="United States",
                 model=resolved_model,
                 conversation_history=st.session_state["assistant_messages"],
@@ -409,7 +408,7 @@ def main():
             )
 
             # Finalize UI state once streaming completes
-            st.session_state["assistant_profile"] = result.profile
+            # No structured profile to persist anymore.
             st.session_state["assistant_tools_state"] = result.artifacts
             latest_tool_name = ""
             for trace in reversed(result.tool_trace):
@@ -456,7 +455,6 @@ def main():
         st.caption("Latest tool output")
         result = OrchestratorResult(
             reply="",
-            profile=st.session_state["assistant_profile"],
             artifacts={
                 **tools_state,
                 "latest_tool_name": st.session_state.get("assistant_latest_tool_name", ""),

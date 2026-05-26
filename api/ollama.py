@@ -6,12 +6,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from app_logic import (
-    coerce_profile_values,
-    missing_profile_fields,
-    merge_profile_values,
-    profile_to_text,
-)
+# profile-related helpers were removed from `app_logic.py` when the
+# structured profile concept was removed; this module no longer imports them.
 
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -29,7 +25,6 @@ PREFERRED_CHAT_MODELS = (
 @dataclass(frozen=True)
 class OllamaInterviewResult:
     reply: str
-    profile: Dict[str, int]
     complete: bool
     raw: str = ""
     used_fallback: bool = False
@@ -290,12 +285,8 @@ def _infer_profile_from_text(text: str, current_profile: Dict[str, int]) -> Dict
 
 def interview_profile(
     messages: List[Dict[str, str]],
-    current_profile: Dict[str, int],
     model: str = OLLAMA_MODEL,
 ) -> OllamaInterviewResult:
-    current_profile = coerce_profile_values(current_profile)
-    latest_user_text = _latest_user_message(messages)
-    inferred_profile = _infer_profile_from_text(latest_user_text, current_profile)
     if not ollama_is_available():
         raise ConnectionError(f"Ollama is not reachable at {OLLAMA_BASE_URL}")
 
@@ -309,22 +300,15 @@ def interview_profile(
 
     payload_messages = [{"role": "system", "content": system_prompt}]
     payload_messages.extend(messages)
-    payload_messages.append(
-        {
-            "role": "system",
-            "content": (
-                f"Current structured profile: {profile_to_text(current_profile)}. "
-                f"Missing fields: {', '.join(missing_profile_fields(current_profile)) or 'none'}."
-            ),
-        }
-    )
+    # Do not include the user's structured profile in the system prompt to
+    # avoid the assistant making assumptions or referencing profile values
+    # inferred from previous messages. The interview should rely on explicit
+    # structured `profile` updates returned by the model or user inputs.
 
     try:
         response = chat_completion(payload_messages, model=model, options={"temperature": 0.2})
         content = response.get("message", {}).get("content", "")
         parsed = _extract_json_object(content)
-        profile_updates = parsed.get("profile", {}) if parsed else {}
-        profile = merge_profile_values(inferred_profile, profile_updates)
 
         reply = content.strip()
         if parsed and isinstance(parsed.get("reply"), str):
@@ -336,10 +320,9 @@ def interview_profile(
         if parsed and "complete" in parsed:
             complete = bool(parsed.get("complete", False))
         else:
-            complete = not missing_profile_fields(profile)
+            complete = False
         return OllamaInterviewResult(
             reply=reply,
-            profile=profile,
             complete=complete,
             raw=content,
             used_fallback=False,

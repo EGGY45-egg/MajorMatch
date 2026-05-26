@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from app_logic import ProfileInput, coerce_profile_values, profile_to_text, recommend_track, suggest_career_context, suggest_courses
+from app_logic import recommend_track, suggest_career_context, suggest_courses
 from course_index import search_courses_with_projection
 from api.ollama import chat_completion, resolve_chat_model
 
@@ -71,7 +71,6 @@ class ToolTrace:
 @dataclass(frozen=True)
 class OrchestratorResult:
     reply: str
-    profile: Dict[str, int]
     artifacts: Dict[str, Any] = field(default_factory=dict)
     tool_trace: List[ToolTrace] = field(default_factory=list)
     raw: str = ""
@@ -214,22 +213,25 @@ def _extract_tool_calls(message: Dict[str, Any]) -> List[Dict[str, Any]]:
     return normalized
 
 
-def _execute_tool(name: str, arguments: Dict[str, Any], profile: Dict[str, int], location: str) -> Dict[str, Any]:
+def _execute_tool(name: str, arguments: Dict[str, Any], location: str) -> Dict[str, Any]:
     if name == "predict_track":
-        merged_profile = coerce_profile_values({**profile, **arguments})
-        # If the tool is called without explicit numeric inputs (or with open_ui=True),
-        # instruct the front-end to open the interactive prediction UI instead of
-        # attempting to parse values from the model output.
+        # Disallow implicit profile-based predictions. The prediction tool must
+        # be called with explicit selected features (a sequence) or the
+        # front-end UI should be opened via `open_ui` so the user can select
+        # interests. If the model supplies numeric coding/math/design keys, do
+        # not use them to infer a profile — instead, ask the UI to open.
         provided_numeric = any(k in arguments for k in ("coding", "math", "design"))
-        if not provided_numeric or arguments.get("open_ui") is True:
+        if provided_numeric or arguments.get("open_ui") is True:
             return {
-                "profile": merged_profile,
                 "action": "open_ui",
                 "message": "open_predict_ui",
             }
-        recommendation = recommend_track(ProfileInput(**merged_profile))
+
+        # If the model provided explicit feature selections, forward them to
+        # the recommendation function which calls into the predictor.
+        features = arguments.get("features") or arguments.get("selected_features") or []
+        recommendation = recommend_track(features)
         return {
-            "profile": merged_profile,
             "prediction": recommendation,
         }
 
@@ -305,7 +307,6 @@ def _build_final_response_prompt(tool_trace: List[ToolTrace], artifacts: Dict[st
 
 def run_orchestrated_assistant(
     user_message: str,
-    current_profile: Dict[str, int],
     *,
     location: str = "United States",
     model: Optional[str] = None,
@@ -316,13 +317,11 @@ def run_orchestrated_assistant(
     stream_chat_fn: Optional[Callable[..., Iterable[str]]] = None,
     on_stream_chunk: Optional[Callable[[str], None]] = None,
 ) -> OrchestratorResult:
-    profile = coerce_profile_values(current_profile)
     resolved_model = resolve_chat_model(model)
 
     if _is_normal_chat_question(user_message):
         return OrchestratorResult(
             reply=_friendly_identity_reply() if re.search(r"\b(what are you|who are you|tell me about yourself|introduce yourself)\b", user_message.lower()) else "Hello. I am MajorMatch, an AI assistant that helps with courses and careers.",
-            profile=profile,
             artifacts={},
             tool_trace=[],
             raw="",
@@ -339,13 +338,15 @@ def run_orchestrated_assistant(
         "Keep replies concise, grounded in tool results when used, and user-facing."
     )
 
+    # Do not include the user's structured profile in system prompts. The
+    # assistant should not make assumptions based on profile values unless a
+    # prediction tool is explicitly invoked. Only include non-sensitive
+    # contextual info such as preferred location.
     messages: List[Dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
-        {
-            "role": "system",
-            "content": f"Current profile: {profile_to_text(profile)}. Preferred location: {location}.",
-        },
     ]
+    if location:
+        messages.append({"role": "system", "content": f"Preferred location: {location}."})
     if conversation_history:
         messages.extend(conversation_history)
     else:
@@ -390,7 +391,6 @@ def run_orchestrated_assistant(
                             raw = "<streamed>"
                             return OrchestratorResult(
                                 reply=final_content,
-                                profile=profile,
                                 artifacts=artifacts,
                                 tool_trace=trace,
                                 raw=raw,
@@ -410,14 +410,12 @@ def run_orchestrated_assistant(
                     raw = json.dumps(final_response)
                     return OrchestratorResult(
                         reply=final_content,
-                        profile=profile,
                         artifacts=artifacts,
                         tool_trace=trace,
                         raw=raw,
                     )
             return OrchestratorResult(
                 reply=_clean_assistant_text(last_content) or "I could not generate a response.",
-                profile=profile,
                 artifacts=artifacts,
                 tool_trace=trace,
                 raw=raw,
@@ -429,13 +427,11 @@ def run_orchestrated_assistant(
         for call in tool_calls:
             name = str(call.get("name") or "")
             arguments = call.get("arguments") or {}
-            result = _execute_tool(name, arguments, profile, location)
+            result = _execute_tool(name, arguments, location)
             trace.append(ToolTrace(name=name, arguments=arguments, result=result))
 
             if name == "predict_track":
-                profile = coerce_profile_values(result.get("profile") or profile)
                 artifacts["prediction"] = result.get("prediction")
-                artifacts["profile"] = profile
             elif name == "get_career_context":
                 artifacts["career_context"] = result
             elif name == "execute_semantic_search":
@@ -452,7 +448,6 @@ def run_orchestrated_assistant(
 
     return OrchestratorResult(
         reply=last_content or "I reached the tool limit before producing a final response.",
-        profile=profile,
         artifacts=artifacts,
         tool_trace=trace,
         raw=raw,
