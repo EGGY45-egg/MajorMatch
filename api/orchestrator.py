@@ -88,13 +88,12 @@ def build_tool_schemas() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "predict_track",
-                "description": "Predict the most likely career track based on skill. If called without numeric inputs, the front-end should open the prediction UI to collect user inputs.",
+                "description": "Predict the most likely career track. Call with `selected_features` (array of feature names) to run the model, or set `open_ui=true` to request the front-end open the interactive prediction UI.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "coding": {"type": "integer", "minimum": 0, "maximum": 10},
-                        "math": {"type": "integer", "minimum": 0, "maximum": 10},
-                        "design": {"type": "integer", "minimum": 0, "maximum": 10},
+                        "selected_features": {"type": "array", "items": {"type": "string"}, "description": "A list of selected feature names from the model's feature set."},
+                        "features": {"type": "array", "items": {"type": "string"}, "description": "Alias for `selected_features`."},
                         "open_ui": {"type": "boolean", "description": "If true, request the front-end to open the predict UI for interactive input."},
                     }
                 },
