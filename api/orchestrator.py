@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from app_logic import recommend_track, suggest_career_context, suggest_courses
+from app_logic import recommend_track, suggest_career_context
 from course_index import search_courses_with_projection
 from api.ollama import chat_completion, resolve_chat_model
 

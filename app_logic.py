@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence
 
@@ -12,6 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 # Collect CSV files if present; callers can use `DATA_DIR` or `COURSE_CSVS`.
 COURSE_CSVS = sorted([p for p in DATA_DIR.glob("*.csv")]) if DATA_DIR.exists() else []
+
 def recommend_track(features: dict | Sequence[str]) -> Dict[str, object]:
     """
     Recommend a track based on either a features dict (deprecated profile-like dict)
@@ -34,11 +34,6 @@ def recommend_track(features: dict | Sequence[str]) -> Dict[str, object]:
     return {"track": track, "confidence": confidence}
 
 
-def suggest_courses(query: str, top_k: int = 5) -> List[Dict[str, str]]:
-    capped_top_k = max(1, min(int(top_k), 5))
-    return semantic_search(query, top_k=capped_top_k)
-
-
 def suggest_career_context(track: str, location: str = "United States"):
     return get_career_context(track, location=location)
 
@@ -56,13 +51,6 @@ def should_open_prediction_tool(message: str) -> bool:
         "what career",
     )
     return any(keyword in lowered for keyword in prediction_keywords)
-def build_course_query(track: str) -> str:
-    track_map = {
-        "Software Engineer": "programming software engineering systems web development",
-        "Data Scientist": "data science statistics machine learning analytics",
-        "Product Designer": "ux design human computer interaction prototyping",
-    }
-    return track_map.get(track, track.lower())
 
 
 def summarize_matches(courses: Sequence[Dict[str, str]]) -> str:
