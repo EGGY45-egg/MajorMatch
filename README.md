@@ -17,6 +17,10 @@ MajorMatch is a chat-first semantic course and career pathfinder for students, a
 - `api/search.py` and `course_index.py`: semantic search and course projections.
 - `api/jobs.py`: career-context lookup.
 
+## Documentation
+- [Project documentation](docs/PROJECT_DOCUMENTATION.md): consolidated overview of the current architecture, data flow, setup, and implementation notes.
+- [Implementation log](docs/IMPLEMENTATION.md): chronological record of changes and decisions.
+
 ## Setup
 1. Create and activate a virtual environment.
 2. Install dependencies:

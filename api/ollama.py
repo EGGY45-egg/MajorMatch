@@ -134,16 +134,28 @@ def chat_completion_stream(
 
     try:
         with urllib.request.urlopen(request, timeout=OLLAMA_REQUEST_TIMEOUT_SECONDS) as response:
-            # Read in small chunks and yield decoded text as it arrives.
+            # Ollama streams newline-delimited JSON objects. Yield only the
+            # assistant text fragments so callers do not render raw payloads.
             while True:
-                chunk = response.read(1024)
-                if not chunk:
+                line = response.readline()
+                if not line:
                     break
                 try:
-                    text = chunk.decode("utf-8")
+                    text = line.decode("utf-8")
                 except Exception:
-                    text = chunk.decode("utf-8", errors="ignore")
-                yield text
+                    text = line.decode("utf-8", errors="ignore")
+                cleaned = text.strip()
+                if not cleaned:
+                    continue
+                try:
+                    payload = json.loads(cleaned)
+                except json.JSONDecodeError:
+                    yield cleaned
+                    continue
+                message = payload.get("message", {}) if isinstance(payload, dict) else {}
+                content = str(message.get("content", "") or "")
+                if content:
+                    yield content
     except urllib.error.HTTPError as he:
         try:
             body = he.read().decode("utf-8")

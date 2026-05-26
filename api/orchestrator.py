@@ -40,6 +40,9 @@ def _is_normal_chat_question(user_message: str) -> bool:
     greeting_patterns = [
         r"^(hi|hello|hey|yo|sup)[\W_]*$",
         r"^(hi|hello|hey|yo|sup)\b",
+        r"^what can (majormatch|you) help me with\??$",
+        r"^how does (this app|majormatch|it) work\??$",
+        r"^what do you do\??$",
         r"what are you\??$",
         r"who are you\??$",
         r"tell me about yourself\??$",
@@ -378,11 +381,11 @@ def run_orchestrated_assistant(
                             model=resolved_model,
                             options={"temperature": 0.2},
                         ):
-                            cleaned_chunk = _clean_assistant_text(chunk)
-                            if not cleaned_chunk:
+                            chunk_text = str(chunk or "")
+                            if not chunk_text:
                                 continue
-                            on_stream_chunk(cleaned_chunk)
-                            final_content += cleaned_chunk
+                            on_stream_chunk(chunk_text)
+                            final_content += chunk_text
                         if final_content:
                             raw = "<streamed>"
                             return OrchestratorResult(

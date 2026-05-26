@@ -233,4 +233,97 @@ def test_identity_question_skips_tools_entirely():
 
     assert result.tool_trace == []
     assert calls == []
-    assert result.reply.startswith("I am MajorMatch")
+    assert result.reply == "I am MajorMatch, an AI assistant that helps you choose courses and career paths. I can answer questions directly, and I’ll use tools only when they add value."
+
+
+def test_app_intro_question_skips_tools_entirely():
+    calls = []
+
+    def fake_chat_fn(messages, model=None, tools=None, options=None):
+        calls.append({"messages": messages, "tools": tools})
+        return {"message": {"content": "This should not be used.", "tool_calls": []}}
+
+    result = orchestrator.run_orchestrated_assistant(
+        "What can MajorMatch help me with?",
+        {"coding": 5, "math": 5, "design": 5},
+        model="test-model",
+        chat_fn=fake_chat_fn,
+    )
+
+    assert result.tool_trace == []
+    assert calls == []
+    assert result.reply == "Hello. I am MajorMatch, an AI assistant that helps with courses and careers."
+
+
+def test_streamed_final_reply_preserves_spaces(monkeypatch):
+    monkeypatch.setattr(
+        orchestrator,
+        "suggest_career_context",
+        lambda track, location="United States": type(
+            "FakeContext",
+            (),
+            {
+                "to_dict": lambda self: {
+                    "track": track,
+                    "location": location,
+                    "source": "Adzuna",
+                    "available": True,
+                    "job_count": 33,
+                    "salary_min": 92300,
+                    "salary_max": 237715,
+                    "salary_currency": "USD",
+                    "top_job_titles": ["Data Scientist"],
+                    "top_companies": ["Google"],
+                    "note": None,
+                    "query_url": None,
+                }
+            },
+        )(),
+    )
+
+    responses = iter(
+        [
+            {
+                "message": {
+                    "content": "",
+                    "tool_calls": [
+                        {
+                            "id": "call-1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_career_context",
+                                "arguments": "{\"track\": \"Data Scientist\", \"location\": \"United States\"}",
+                            },
+                        }
+                    ],
+                }
+            },
+            {"message": {"content": "", "tool_calls": []}},
+        ]
+    )
+
+    def fake_chat_fn(messages, model=None, tools=None, options=None):
+        return next(responses)
+
+    streamed_chunks = []
+
+    def fake_stream_chat_fn(messages, model=None, options=None):
+        yield "Based on the career context tool, the results are:"
+        yield "\n\nJob count: 33"
+        yield "\nSalary range: 92,300 - 237,715"
+
+    result = orchestrator.run_orchestrated_assistant(
+        "How many jobs are there for data scientist?",
+        {"coding": 5, "math": 5, "design": 5},
+        model="test-model",
+        chat_fn=fake_chat_fn,
+        stream_chat_fn=fake_stream_chat_fn,
+        on_stream_chunk=streamed_chunks.append,
+    )
+
+    assert result.reply == "Based on the career context tool, the results are:\n\nJob count: 33\nSalary range: 92,300 - 237,715"
+    assert streamed_chunks == [
+        "Based on the career context tool, the results are:",
+        "\n\nJob count: 33",
+        "\nSalary range: 92,300 - 237,715",
+    ]

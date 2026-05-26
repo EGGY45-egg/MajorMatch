@@ -39,6 +39,28 @@ Implementation Log
 ------------------
 
 
+Date: 2026-05-26
+Author: RV
+Area: Backend / UI / Validation
+Files changed:
+- api/orchestrator.py
+- tests/test_orchestrator.py
+- docs/IMPLEMENTATION.md
+Summary: Preserve spaces in streamed assistant replies
+Details: The orchestrator now forwards streamed assistant chunks without stripping leading whitespace, so Ollama fragments like `" on"` stay readable when concatenated in the Streamlit chat UI. Added a regression test that verifies the streamed reply keeps spaces and line breaks intact.
+
+
+Date: 2026-05-26
+Author: RV
+Area: Backend / UI / Validation
+Files changed:
+- api/ollama.py
+- tests/test_ollama.py
+- docs/IMPLEMENTATION.md
+Summary: Fix streamed Ollama replies rendering raw NDJSON instead of assistant text
+Details: Updated `chat_completion_stream()` to parse Ollama's newline-delimited JSON stream and yield only the assistant `message.content` fragments. Added a regression test that verifies the streamed output is plain text, which prevents the Streamlit chat UI from showing raw JSON payloads during assistant responses.
+
+
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
