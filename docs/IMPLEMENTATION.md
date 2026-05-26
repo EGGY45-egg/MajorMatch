@@ -39,7 +39,6 @@ Implementation Log
 ------------------
 
 
-
 Date: 2026-05-25
 Author: RV
 Area: Scaffold
@@ -366,6 +365,17 @@ Files changed:
 - streamlit_app.py
 Summary: Render only the most recent tool artifact in the UI
 Details: Updated the chat UI to show a single tool panel per assistant turn. The app now tracks `assistant_latest_tool_name` in session state and clears previous artifacts at the start of each new user turn so stale panels are not shown after timeouts or unrelated requests. The code chooses the most recent tool from the orchestrator `tool_trace` that produced an artifact and renders only that panel; a safe fallback renders one available artifact when the marker is missing. Tests were run after the change and the suite passed (`14 passed`).
+
+
+Date: 2026-05-26
+Author: RV
+Area: Backend / Docs
+Files changed:
+- api/ollama.py
+- scripts/test_ollama_tools.py
+Summary: Surface Ollama HTTP error bodies and fall back to a tool-capable model when tools are requested
+Details: Added enhanced error handling in api/ollama.py to read and surface HTTP error bodies from the Ollama server so validation failures (e.g., "does not support tools") are visible to the developer. Implemented a fallback selection in chat_completion() that prefers an available model known to support function/tool calling when the request includes tools. Added scripts/test_ollama_tools.py to reproduce the issue locally and validate the fallback. Verified the repro script locally; tool-enabled requests now succeed by falling back to llama3.2:1b in the tested environment.
+
 
 Notes
 -----
