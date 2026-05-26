@@ -345,6 +345,19 @@ Files changed:
 Summary: Add a dedicated prediction tool panel driven by multiselect feature input
 Details: The chat flow now opens a separate prediction panel when the user asks for the tool, instead of forcing the assistant to infer a prediction from free-form text. The panel mirrors the teammate prototype by letting the user pick interests from the model's feature list and then runs the classifier directly on those selections.
 
+
+Date: 2026-05-26
+Author: RV
+Area: UI / Backend / ML
+Files changed:
+- api/predict.py
+- app_logic.py
+- streamlit_app.py
+- tests/test_predict.py
+- docs/IMPLEMENTATION.md
+Summary: Extend `predict_track` to return and display top-3 predictions
+Details: Added `top_predictions` output to `predict_track()` using model probabilities (top 3 ranked labels with confidence and category), while keeping the existing primary `label`/`confidence` fields for compatibility. Added fallback behavior that returns a single-item `top_predictions` list when the model path is unavailable. Propagated the new field through `recommend_track()` and updated the prediction UI card to show the ranked results. Expanded predictor tests to assert the new payload shape. Validation: full test suite passes (`14 passed`).
+
 Notes
 -----
 

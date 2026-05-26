@@ -20,6 +20,18 @@ def _render_tool_prediction(prediction):
     st.progress(min(float(prediction["confidence"]), 1.0))
     st.caption(f"Confidence score: {prediction['confidence']:.2f}")
 
+    top_predictions = prediction.get("top_predictions") or []
+    if top_predictions:
+        st.markdown("Top 3 predictions")
+        for index, item in enumerate(top_predictions[:3], start=1):
+            label = item.get("label") or "Unknown"
+            confidence = item.get("confidence")
+            category = item.get("category")
+            details = f"{index}. {label} ({float(confidence):.2f})" if confidence is not None else f"{index}. {label}"
+            if category:
+                details += f" - {category}"
+            st.write(details)
+
 
 def _render_prediction_tool():
     st.markdown("### Prediction Tool")

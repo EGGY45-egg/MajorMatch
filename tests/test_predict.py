@@ -50,6 +50,8 @@ def test_predict_track_uses_model_bundle_and_maps_major_to_track(monkeypatch):
     assert prediction["label"] == "B.Tech.-Computer Science and Engineering"
     assert prediction["category"] == "Software Engineer"
     assert prediction["confidence"] == 0.84
+    assert len(prediction["top_predictions"]) == 2
+    assert prediction["top_predictions"][0]["label"] == "B.Tech.-Computer Science and Engineering"
     assert fake_model.last_input is not None
     assert fake_model.last_input.iloc[0]["Coding"] == 1
 
@@ -62,6 +64,13 @@ def test_predict_track_falls_back_when_model_loading_fails(monkeypatch):
 
     assert prediction["label"] == "Software Engineer"
     assert prediction["confidence"] == 0.9
+    assert prediction["top_predictions"] == [
+        {
+            "label": "Software Engineer",
+            "confidence": 0.9,
+            "category": "Software Engineer",
+        }
+    ]
 
 
 def test_predict_track_accepts_direct_feature_selections(monkeypatch):
@@ -80,6 +89,8 @@ def test_predict_track_accepts_direct_feature_selections(monkeypatch):
 
     assert prediction["label"] == "BVA- Bachelor of Visual Arts"
     assert prediction["source"] == "model"
+    assert len(prediction["top_predictions"]) == 2
+    assert prediction["top_predictions"][0]["label"] == "BVA- Bachelor of Visual Arts"
     assert fake_model.last_input is not None
     assert fake_model.last_input.iloc[0]["Coding"] == 1
     assert fake_model.last_input.iloc[0]["Mathematics"] == 1

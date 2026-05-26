@@ -191,7 +191,36 @@ def _rule_based_predict(profile: Dict[str, int]) -> Dict[str, object]:
         "confidence": confidence,
         "category": _label_to_category(label),
         "source": "fallback",
+        "top_predictions": [
+            {
+                "label": label,
+                "confidence": confidence,
+                "category": _label_to_category(label),
+            }
+        ],
     }
+
+
+def _build_top_predictions(bundle: ModelBundle, model_frame: pd.DataFrame) -> List[Dict[str, object]]:
+    if not hasattr(bundle.model, "predict_proba"):
+        return []
+
+    probabilities = bundle.model.predict_proba(model_frame)[0]
+    class_indices = list(range(len(probabilities)))
+    ranked_indices = sorted(class_indices, key=lambda index: float(probabilities[index]), reverse=True)[:3]
+
+    top_predictions: List[Dict[str, object]] = []
+    for class_index in ranked_indices:
+        predicted_label = bundle.encoder.inverse_transform([int(class_index)])[0]
+        top_predictions.append(
+            {
+                "label": predicted_label,
+                "confidence": float(probabilities[class_index]),
+                "category": _label_to_category(predicted_label),
+            }
+        )
+
+    return top_predictions
 
 
 def predict_track(features: dict | Sequence[str]) -> Dict[str, object]:
@@ -212,15 +241,18 @@ def predict_track(features: dict | Sequence[str]) -> Dict[str, object]:
         predicted_label = bundle.encoder.inverse_transform([int(encoded_prediction)])[0]
 
         confidence = 0.0
+        top_predictions: List[Dict[str, object]] = []
         if hasattr(bundle.model, "predict_proba"):
             probabilities = bundle.model.predict_proba(model_frame)[0]
             confidence = float(max(probabilities))
+            top_predictions = _build_top_predictions(bundle, model_frame)
 
         return {
             "label": predicted_label,
             "confidence": confidence,
             "category": _label_to_category(predicted_label),
             "source": "model",
+            "top_predictions": top_predictions,
         }
     except Exception:
         return _rule_based_predict(profile)
