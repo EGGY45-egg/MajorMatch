@@ -1,0 +1,16 @@
+flowchart LR
+  %% Orchestrator overall flowchart
+  U[User] --> N{Normal chat?}
+  N -- Yes --> R[Return direct reply]
+  N -- No --> S[Build message context]
+  S --> T[Call model with tools]
+  T --> M[Receive model output]
+  M --> O{Tool calls present?}
+  O -- Yes --> V[Run each tool and store results]
+  V --> T
+  O -- No --> P{Any prior tool trace?}
+  P -- Yes --> F[Build final grounded reply]
+  F --> G[Return final reply]
+  P -- No --> Q[Return cleaned assistant text]
+  %% Loop continues up to max_steps
+  style G fill:#bff,stroke:#333

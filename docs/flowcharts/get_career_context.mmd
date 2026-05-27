@@ -1,0 +1,14 @@
+flowchart LR
+  %% get_career_context tool flowchart
+  A[Incoming tool call: `get_career_context`\nargs: track, location] --> B{Is `track` provided?}
+  B -- No --> C[Return CareerContext: available=False, note='No career track provided']
+  B -- Yes --> D{Have Adzuna credentials?}
+  D -- No --> E[Return CareerContext: available=False, note='Set ADZUNA_APP_ID/KEY to enable live data']
+  D -- Yes --> F[Build Adzuna query URL -> call API]
+  F --> G{API request successful?}
+  G -- No --> H[Return CareerContext available=False with error note and query_url]
+  G -- Yes --> I[Parse payload -> extract job_count, salary_min/max, top_job_titles, top_companies]
+  I --> J[Return CareerContext available=True with populated fields and query_url]
+  style J fill:#bff,stroke:#333,stroke-width:1px
+  style C fill:#fff3bf,stroke:#f0c36d
+  style E fill:#fff3bf,stroke:#f0c36d

@@ -1,0 +1,16 @@
+flowchart LR
+  %% Predict Track tool flowchart
+  A[Incoming tool call: `predict_track`\nargs: selected_features, features, open_ui, numeric keys] --> B{Has numeric keys or `open_ui`?}
+  B -- Yes --> C[Return action: open UI]
+  B -- No --> D{Has explicit `selected_features`?}
+  D -- No --> E[No features provided -> Ask user to select interests]
+  D -- Yes --> F[Build feature row from selected features]
+  F --> G[Load model artifacts from `ml_model/`]
+  G --> H{Model bundle available?}
+  H -- Yes --> I[Run model inference -> predicted label, confidence, top_predictions]
+  H -- No --> J[Fallback rule-based predictor -> simple label and confidence 0.25/0.5]
+  I --> K[Return prediction artifact: label, confidence, category, source, top_predictions]
+  J --> K
+  E --> C
+  style K fill:#bff,stroke:#333,stroke-width:1px
+  classDef note fill:#fff3bf,stroke:#f0c36d;

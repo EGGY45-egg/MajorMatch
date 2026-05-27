@@ -1,0 +1,14 @@
+flowchart LR
+  %% execute_semantic_search tool flowchart
+  A[Tool call: execute_semantic_search] --> B{Query empty?}
+  B -- Yes --> C[List courses]
+  C --> D[Return results]
+  B -- No --> E[Create query embedding]
+  E --> F{Vector extension available?}
+  F -- Yes --> G[Run pgvector search]
+  F -- No --> H[Rank with cosine similarity]
+  G --> I[Collect top results]
+  H --> I
+  I --> J[Compute projection]
+  J --> K[Return results + projection]
+  style K fill:#bff,stroke:#333,stroke-width:1px

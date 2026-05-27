@@ -1,0 +1,66 @@
+flowchart LR
+  %% MajorMatch architecture overview
+
+  U[Student / Advisor User] --> UI[Streamlit App\nstreamlit_app.py]
+  UI --> AL[App Logic\napp_logic.py]
+  AL --> ORCH[Orchestrator\napi/orchestrator.py]
+
+  subgraph LLM[Local LLM Layer]
+    OLLAMA[Ollama Chat API\napi/ollama.py]
+  end
+
+  subgraph TOOLS[Tool Layer]
+    PRED[predict_track\napi/predict.py]
+    JOBS[get_career_context\napi/jobs.py]
+    SEARCH[execute_semantic_search\napi/search.py]
+  end
+
+  subgraph SEARCHSTACK[Semantic Search Stack]
+    INDEXER[Indexer / Embedder\nscripts/embed.py]
+    CI[Course Index\ncourse_index.py]
+    DB[(PostgreSQL\ncourses + embeddings + projections)]
+    DATA[(CSV Corpus\ndata/*.csv)]
+  end
+
+  subgraph MODELS[Prediction Assets]
+    ML[(Trained Model Files\nml_model/*.pkl)]
+    TRAIN[(Training CSV\nml_model/stud_training.csv)]
+  end
+
+  subgraph EXTERNAL[External Services]
+    ADZUNA[Adzuna Job API]
+  end
+
+  ORCH --> OLLAMA
+  OLLAMA --> ORCH
+
+  ORCH --> PRED
+  ORCH --> JOBS
+  ORCH --> SEARCH
+
+  PRED --> ML
+  PRED --> TRAIN
+
+  JOBS --> ADZUNA
+
+  SEARCH --> CI
+  CI --> DB
+  INDEXER --> CI
+  DATA --> INDEXER
+  INDEXER --> DB
+
+  UI -->|renders replies, results, charts| U
+  ORCH -->|reply + artifacts| UI
+  SEARCH -->|results + projection| ORCH
+  JOBS -->|career context| ORCH
+  PRED -->|prediction| ORCH
+
+  classDef app fill:#0b1f3a,stroke:#7aa2ff,color:#ffffff;
+  classDef tool fill:#102a43,stroke:#9fbfff,color:#ffffff;
+  classDef store fill:#1b2a41,stroke:#7dd3fc,color:#ffffff;
+  classDef external fill:#2b1b3d,stroke:#d8b4fe,color:#ffffff;
+
+  class UI,AL,ORCH app;
+  class OLLAMA,PRED,JOBS,SEARCH,INDEXER,CI tool;
+  class DB,DATA,ML,TRAIN store;
+  class ADZUNA external;
