@@ -21,6 +21,7 @@ MajorMatch is a chat-first semantic course and career pathfinder for students, a
 - [Project documentation](docs/PROJECT_DOCUMENTATION.md): consolidated overview of the current architecture, data flow, setup, and implementation notes.
 - [Setup instructions](docs/instruction.md): dedicated local setup guide for Python, PostgreSQL, Ollama, indexing, and validation.
 - [Implementation log](docs/IMPLEMENTATION.md): chronological record of changes and decisions.
+- [Flowchart showcase](docs/flowcharts/README.md): architecture and execution diagrams for the three tools and the overall system.
 
 ## Setup
 See the full setup guide in [docs/instruction.md](docs/instruction.md).
