@@ -49,7 +49,7 @@ $env:PYTHONPATH='.'; .\venv\Scripts\python -m pytest tests/test_orchestrator.py 
 ```
 
 ## Notes
-- The app uses tool calling automatically for relevant prompts such as salaries, career outlook, predictions, and course search. Structured user "profiles" have been removed — predictions are driven from selected model feature names or the interactive prediction UI.
+- The app uses tool calling automatically for relevant prompts such as salaries, career outlook, predictions, and course search.
 - If `pgvector` is unavailable, the search layer falls back to a portable embedding storage/search path.
 - The Streamlit UI is intentionally minimal and chat-first.
 
