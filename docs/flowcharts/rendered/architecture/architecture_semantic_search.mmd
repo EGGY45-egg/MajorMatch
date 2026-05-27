@@ -1,0 +1,16 @@
+flowchart LR
+  %% Semantic search architecture
+  Q[User query] --> Q1[Embedding model\nall-MiniLM-L6-v2]
+  Q1 --> V[Query vector]
+  D[Course corpus\ndata/*.csv] --> I[Indexer\nscripts/embed.py]
+  I --> E[Course embeddings]
+  I --> P[2D projections\nPCA UMAP TSNE]
+  E --> S[Course store\nPostgreSQL float arrays]
+  P --> S
+  S --> R[Search and ranking\ncosine or pgvector]
+  V --> R
+  R --> M[Top matches]
+  V --> X[Projection with query point]
+  S --> X
+  M --> O[Semantic search output]
+  X --> O

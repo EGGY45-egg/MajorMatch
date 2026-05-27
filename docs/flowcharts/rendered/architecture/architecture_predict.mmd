@@ -1,0 +1,14 @@
+---
+config:
+  layout: fixed
+---
+flowchart LR
+    U["Selected features"] --> R["Feature row builder"]
+    R --> B["Model bundle loader"]
+    B --> M["Random forest model"] & E["Label encoder"]
+    M --> P["Predicted label"] & C["Confidence scores"]
+    E --> P
+    P --> O["Prediction output"]
+    C --> O
+    S["Training CSV\nml_model/stud_training.csv"] --> B
+    F["Saved artifacts\nmajormatch_rf_model.pkl\nmajormatch_encoder.pkl\nmajormatch_features.pkl"] --> B

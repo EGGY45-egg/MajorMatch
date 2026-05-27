@@ -1,0 +1,17 @@
+flowchart LR
+  %% Job context architecture
+  T[Track name] --> Q[Job query builder]
+  L[Location] --> U[Query URL builder]
+  Q --> U
+  C[.env loader] --> N[Adzuna config\nADZUNA_BASE_URL\nADZUNA_APP_ID\nADZUNA_APP_KEY\nADZUNA_COUNTRY\nADZUNA_CURRENCY]
+  N --> U
+  U --> H[HTTP request]
+  H --> J[JSON response]
+  J --> S[Salary range extractor]
+  J --> G[Job title extractor]
+  J --> O[Company extractor]
+  S --> R[CareerContext object]
+  G --> R
+  O --> R
+  R --> D[to_dict output]
+  D --> X[Career context output]
